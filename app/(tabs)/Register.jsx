@@ -1,41 +1,32 @@
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import React, { useState } from "react";
 import { SafeAreaView } from "react-native-safe-area-context";
-import {
-  View,
-  StyleSheet,
-  Text,
-  TextInput,
-  TouchableOpacity,
-  Alert,
-} from "react-native";
+import { View, StyleSheet, Text, TextInput, TouchableOpacity, Alert } from "react-native";
+import { useNavigation } from '@react-navigation/native';
 
 function Register() {
+  const navigation = useNavigation();
   const [email, setEmail] = useState("");
   const [mobile, setMobile] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
+  const [name, setName] = useState("");         
+  const [gender, setGender] = useState("");     
+  const [dob, setDob] = useState("");           
 
   const handleRegister = async () => {
-    // Debugging: Log the input values before making the request
-    console.log("Registering user with:", {
-      email,
-      mobile,
-      password,
-      confirmPassword,
-    });
-
     if (password !== confirmPassword) {
       Alert.alert("Error", "Passwords do not match");
-      console.log("Passwords do not match"); // Debugging: Log password mismatch
+      return;
+    }
+
+    // Validate if all required fields are filled
+    if (!name || !email || !mobile || !password || !gender || !dob) {
+      Alert.alert("Error", "Please fill all the fields");
       return;
     }
 
     try {
-      // Debugging: Log the API call is being made
-      console.log(
-        "Sending request to: https://drip-advisor-backend.vercel.app/users/signup"
-      );
-
       const response = await fetch(
         "https://drip-advisor-backend.vercel.app/users/signup",
         {
@@ -46,28 +37,24 @@ function Register() {
           body: JSON.stringify({
             email,
             password,
-            name: mobile, // Assuming name is mobile for now
-            gender: "male", // You can update or collect this as needed
-            dob: "1990-01-01", // Placeholder for DOB, can be added to the form
+            name,
+            gender,
+            dob,
           }),
         }
       );
 
-      // Debugging: Log the response status and data
-      console.log("Response status:", response.status);
-
       const data = await response.json();
-      console.log("Response data:", data); // Debugging: Log the response data
 
-      if (response.ok) {
-        Alert.alert("Success", "User created successfully");
-        console.log("User created successfully"); // Debugging: Log success message
+      if (response.ok && data.access_token) {
+        await AsyncStorage.setItem('access_token', data.access_token); // Save the token
+        Alert.alert("Success", "User created successfully", [
+          { text: "OK", onPress: () => navigation.navigate('Home') } // Navigate to Home after alert
+        ]);
       } else {
         Alert.alert("Error", data.message || "Registration failed");
-        console.error("Error:", data.message || "Unknown error"); // Debugging: Log error message
       }
     } catch (error) {
-      // Debugging: Log any exceptions
       console.error("Error during registration:", error);
       Alert.alert("Error", "Something went wrong. Please try again later.");
     }
@@ -79,6 +66,12 @@ function Register() {
         <Text style={styles.titleText}>Welcome Onboard!</Text>
       </View>
       <View style={styles.formContainer}>
+        <TextInput
+          style={styles.input}
+          placeholder="Enter name"
+          value={name}
+          onChangeText={setName}
+        />
         <TextInput
           style={styles.input}
           placeholder="Enter email"
@@ -107,9 +100,28 @@ function Register() {
           value={confirmPassword}
           onChangeText={setConfirmPassword}
         />
+        <TextInput
+          style={styles.input}
+          placeholder="Enter Gender (e.g., male/female)"
+          value={gender}
+          onChangeText={setGender}
+        />
+        <TextInput
+          style={styles.input}
+          placeholder="Enter Date of Birth (YYYY-MM-DD)"
+          value={dob}
+          onChangeText={setDob}
+        />
         <TouchableOpacity style={styles.button} onPress={handleRegister}>
           <Text style={styles.buttonText}>Register</Text>
         </TouchableOpacity>
+
+        <View style={styles.loginContainer}>
+          <Text style={styles.loginText}>Already have an account? </Text>
+          <TouchableOpacity onPress={() => navigation.navigate('Login')}>
+            <Text style={styles.loginButton}>Login</Text>
+          </TouchableOpacity>
+        </View>
       </View>
     </SafeAreaView>
   );
@@ -135,6 +147,7 @@ const styles = StyleSheet.create({
     flex: 2,
     justifyContent: "center",
     alignItems: "center",
+    paddingBottom: 20,
   },
   input: {
     width: "100%",
@@ -157,6 +170,19 @@ const styles = StyleSheet.create({
   buttonText: {
     color: "white",
     fontSize: 14,
+  },
+  loginContainer: {
+    flexDirection: 'row',
+    marginTop: 20,
+    justifyContent: "center",
+  },
+  loginText: {
+    fontSize: 14,
+  },
+  loginButton: {
+    fontSize: 14,
+    color: "#50C2C9",
+    fontWeight: "bold",
   },
 });
 

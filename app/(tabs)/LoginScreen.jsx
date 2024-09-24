@@ -1,25 +1,20 @@
 import React, { useState } from 'react';
 import { View, Text, TextInput, TouchableOpacity, StyleSheet, SafeAreaView, Image, Alert } from 'react-native';
+import AsyncStorage from '@react-native-async-storage/async-storage'; 
+import { useNavigation } from '@react-navigation/native';
 
 const LoginScreen = () => {
+  const navigation = useNavigation(); 
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
 
-  // Function to handle login process
   const handleLogin = async () => {
-    console.log("Login button pressed!");
-
-    // Basic validation for required fields
     if (!email || !password) {
       Alert.alert('Error', 'Please enter both email and password');
-      console.log('Email or password is missing');  // Log for debugging
       return;
     }
 
     try {
-      console.log('Sending login request to API...');
-
-      // Make the POST request to the /users/login endpoint
       const response = await fetch('https://drip-advisor-backend.vercel.app/users/login', {
         method: 'POST',
         headers: {
@@ -32,20 +27,16 @@ const LoginScreen = () => {
       });
 
       const data = await response.json();
-      console.log('Response status:', response.status);
-      console.log('Response data:', data);
 
-      // Handle success or error
       if (response.ok) {
-        Alert.alert('Success', 'Login successful');
-        console.log('User logged in successfully');  // Log success
-        // Handle successful login (e.g., navigate to another screen, save token, etc.)
+        await AsyncStorage.setItem('access_token', data.access_token); 
+        Alert.alert('Success', 'Login successful', [
+          { text: "OK", onPress: () => navigation.navigate('Home') } 
+        ]);
       } else {
         Alert.alert('Error', data.message || 'Login failed');
-        console.error('Login failed:', data);  // Log error message
       }
     } catch (error) {
-      console.error('Network error during login:', error);
       Alert.alert('Error', 'Network error. Please try again later.');
     }
   };
@@ -64,7 +55,6 @@ const LoginScreen = () => {
       </View>
       
       <View style={styles.inputContainer}>
-        {/* Email Input Field */}
         <TextInput
           style={styles.input}
           placeholder="Enter your email"
@@ -72,7 +62,6 @@ const LoginScreen = () => {
           value={email}
           onChangeText={setEmail}
         />
-        {/* Password Input Field */}
         <TextInput
           style={styles.input}
           placeholder="Enter password"
@@ -81,14 +70,12 @@ const LoginScreen = () => {
           value={password}
           onChangeText={setPassword}
         />
-        {/* Forgot Password Link */}
         <TouchableOpacity>
           <Text style={styles.forgotPassword}>Forgot Password?</Text>
         </TouchableOpacity>
       </View>
 
       <View style={styles.signInContainer}>
-        {/* Sign In Button */}
         <TouchableOpacity style={styles.signInButton} onPress={handleLogin}>
           <Text style={styles.signInText}>Sign In</Text>
         </TouchableOpacity>
@@ -96,7 +83,7 @@ const LoginScreen = () => {
 
       <View style={styles.signUpContainer}>
         <Text style={styles.signUpText}>Don't have an account? </Text>
-        <TouchableOpacity>
+        <TouchableOpacity onPress={() => navigation.navigate('Register')}>
           <Text style={styles.signUpLink}>Sign Up</Text>
         </TouchableOpacity>
       </View>
@@ -104,7 +91,6 @@ const LoginScreen = () => {
   );
 };
 
-// Styling for the component
 const styles = StyleSheet.create({
   container: {
     flex: 1,
@@ -126,37 +112,38 @@ const styles = StyleSheet.create({
   illustration: {
     width: 200,
     height: 200,
-    resizeMode: 'contain',
   },
   inputContainer: {
-    marginBottom: 20,
-  },
-  input: {
-    width: '100%', 
-    height: 40, 
-    backgroundColor: 'white',
-    borderColor: 'white', 
-    borderWidth: 1, 
-    borderRadius: 20, 
-    paddingHorizontal: 10, 
-    marginBottom: 15, 
-  },
-  forgotPassword: {
-    color: '#50C2C9',
-    textAlign: 'right',
-    marginBottom: 20,
-  },
-  signInButton: {
-    backgroundColor: '#50C2C9',
-    width: 300,
-    padding: 15,
-    borderRadius: 10,
-    alignItems: 'center',
     marginVertical: 10,
   },
+  input: {
+    width: '100%',
+    height: 50,
+    borderColor: '#ccc',
+    borderWidth: 1,
+    borderRadius: 25,
+    paddingHorizontal: 15,
+    marginBottom: 15,
+  },
+  forgotPassword: {
+    color: '#007BFF',
+    marginBottom: 20,
+    textAlign: 'right',
+  },
+  signInContainer: {
+    alignItems: 'center',
+  },
+  signInButton: {
+    width: '100%',
+    height: 50,
+    backgroundColor: '#50C2C9',
+    borderRadius: 25,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
   signInText: {
-    color: 'white',
-    fontWeight: 'bold',
+    color: '#fff',
+    fontSize: 18,
   },
   signUpContainer: {
     flexDirection: 'row',
@@ -164,13 +151,10 @@ const styles = StyleSheet.create({
     marginTop: 20,
   },
   signUpText: {
-    color: '#333',
-  },
-  signInContainer: {
-    alignItems: 'center',
-    justifyContent: 'center',
+    fontSize: 14,
   },
   signUpLink: {
+    fontSize: 14,
     color: '#50C2C9',
     fontWeight: 'bold',
   },
