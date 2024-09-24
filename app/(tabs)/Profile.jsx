@@ -9,6 +9,7 @@ import {
   SafeAreaView,
   ActivityIndicator,
 } from 'react-native';
+import AsyncStorage from '@react-native-async-storage/async-storage'; // Import AsyncStorage
 
 const ProfileScreen = () => {
   const [name, setName] = useState('');
@@ -19,43 +20,54 @@ const ProfileScreen = () => {
   const [newPreference, setNewPreference] = useState('');
   const [loading, setLoading] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
-
-  // Use the provided access token
-  const accessToken = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJmcmVzaCI6ZmFsc2UsImlhdCI6MTcyNzE0ODgzNywianRpIjoiNzk4NjFlOTktMDU5ZC00NTI2LWI1OTUtNjFjODk4ODIzNmRjIiwidHlwZSI6ImFjY2VzcyIsInN1YiI6IjIyejIzM0Bwc2d0ZWNoLmFjLmluIiwibmJmIjoxNzI3MTQ4ODM3LCJjc3JmIjoiNzJlMDgxZjQtNWJmNy00MjRhLTljMjgtOGFhMjc5YmNlMGVlIiwiZXhwIjoxNzI3MjM1MjM3fQ.XyG4NkkiMkH6na1eKRAdLjTiFSDSSOamzS2SkXIu2FE';
+  const [accessToken, setAccessToken] = useState(''); // State for storing the token
 
   useEffect(() => {
-    const fetchUserProfile = async () => {
-      setLoading(true);
+    const fetchAccessToken = async () => {
       try {
-        const response = await fetch('https://drip-advisor-backend.vercel.app/users/profile', {
-          method: 'GET',
-          headers: {
-            Authorization: `Bearer ${accessToken}`,
-          },
-        });
-        if (!response.ok) throw new Error('Failed to fetch user profile');
-        const data = await response.json();
-        setName(data.name);
-        setEmail(data.email);
-        setGender(data.gender);
-        setDob(new Date(data.dob));
-        if (data.preferences && Array.isArray(data.preferences)) {
-          const parsedPreferences = data.preferences.map(pref => pref.split(' on ')[0]);
-          setPreferences(parsedPreferences);
+        const token = await AsyncStorage.getItem('access_token'); // Retrieve token from AsyncStorage
+        if (token) {
+          setAccessToken(token);
+          fetchUserProfile(token); // Fetch profile data using the token
+        } else {
+          Alert.alert('Error', 'Access token not found');
         }
       } catch (error) {
-        Alert.alert('Error', error.message);
-      } finally {
-        setLoading(false);
+        Alert.alert('Error', 'Failed to retrieve access token');
       }
     };
 
-    fetchUserProfile();
-  }, [accessToken]);
+    fetchAccessToken();
+  }, []);
+
+  const fetchUserProfile = async (token) => {
+    setLoading(true);
+    try {
+      const response = await fetch('https://drip-advisor-backend.vercel.app/users/profile', {
+        method: 'GET',
+        headers: {
+          Authorization: `Bearer ${token}`, // Use the token dynamically
+        },
+      });
+      if (!response.ok) throw new Error('Failed to fetch user profile');
+      const data = await response.json();
+      setName(data.name);
+      setEmail(data.email);
+      setGender(data.gender);
+      setDob(new Date(data.dob));
+      if (data.preferences && Array.isArray(data.preferences)) {
+        const parsedPreferences = data.preferences.map(pref => pref.split(' on ')[0]);
+        setPreferences(parsedPreferences);
+      }
+    } catch (error) {
+      Alert.alert('Error', error.message);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const handleUpdateProfile = async () => {
     if (newPreference.trim() !== '') {
-      // Add new preference only if it's not empty
       setPreferences([...preferences, newPreference]);
     }
 
@@ -65,7 +77,7 @@ const ProfileScreen = () => {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
-          Authorization: `Bearer ${accessToken}`,
+          Authorization: `Bearer ${accessToken}`, // Use the token dynamically
         },
         body: JSON.stringify({
           name,
@@ -128,12 +140,9 @@ const ProfileScreen = () => {
               ) : (
                 <Text>No preferences set.</Text>
               )}
-              {/* Hide Edit button when in editing mode */}
             </>
           )}
-          {!isEditing && (
-            <Button title="Edit" onPress={() => setIsEditing(true)} />
-          )}
+          {!isEditing && <Button title="Edit" onPress={() => setIsEditing(true)} />}
         </View>
       )}
     </SafeAreaView>
