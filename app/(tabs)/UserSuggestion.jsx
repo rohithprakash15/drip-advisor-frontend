@@ -17,7 +17,7 @@ const UserSuggestion = () => {
         const response = await fetch('https://drip-advisor-backend.vercel.app/outfits', {
           method: 'GET',
           headers: {
-            Authorization: 'Bearer <your_access_token>', // Replace with actual token
+            Authorization: 'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJmcmVzaCI6ZmFsc2UsImlhdCI6MTcyNzE0ODgzNywianRpIjoiNzk4NjFlOTktMDU5ZC00NTI2LWI1OTUtNjFjODk4ODIzNmRjIiwidHlwZSI6ImFjY2VzcyIsInN1YiI6IjIyejIzM0Bwc2d0ZWNoLmFjLmluIiwibmJmIjoxNzI3MTQ4ODM3LCJjc3JmIjoiNzJlMDgxZjQtNWJmNy00MjRhLTljMjgtOGFhMjc5YmNlMGVlIiwiZXhwIjoxNzI3MjM1MjM3fQ.XyG4NkkiMkH6na1eKRAdLjTiFSDSSOamzS2SkXIu2FE',
           },
         });
 
