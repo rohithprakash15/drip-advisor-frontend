@@ -1,65 +1,96 @@
-import React, { useState } from 'react';
-import { View, Button, Image, StyleSheet, Alert } from 'react-native';
+import React, { useState, useEffect } from 'react';
+import { View, Button, Image, StyleSheet, Alert, Platform } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
-import { Camera } from 'expo-camera';
 import axios from 'axios';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 const UploadImageScreen = () => {
   const [imageUri, setImageUri] = useState(null);
+  const [accessToken, setAccessToken] = useState(null);
 
+  // Fetch access token from AsyncStorage on component mount
+  useEffect(() => {
+    const getToken = async () => {
+      const token = await AsyncStorage.getItem('access_token');
+      setAccessToken(token);
+    };
+    getToken();
+  }, []);
+
+  // Function to select image from the gallery
   const selectImage = async () => {
     const permissionResult = await ImagePicker.requestMediaLibraryPermissionsAsync();
     if (permissionResult.granted === false) {
       Alert.alert('Permission to access gallery is required!');
       return;
     }
-    const result = await ImagePicker.launchImageLibraryAsync({ base64: true });
+
+    const result = await ImagePicker.launchImageLibraryAsync();
     if (!result.canceled) {
-      setImageUri(result.assets[0].uri);
+      const uri = result.assets[0].uri;
+      setImageUri(uri);
+      console.log('Selected Image URI:', uri);
     }
   };
 
+  // Function to take a photo using the camera
   const takePhoto = async () => {
-    const permissionResult = await Camera.requestCameraPermissionsAsync();
+    const permissionResult = await ImagePicker.requestCameraPermissionsAsync();
     if (permissionResult.granted === false) {
       Alert.alert('Permission to access camera is required!');
       return;
     }
-    const result = await ImagePicker.launchCameraAsync({ base64: true });
+
+    const result = await ImagePicker.launchCameraAsync();
     if (!result.canceled) {
-      setImageUri(result.assets[0].uri);
+      const uri = result.assets[0].uri;
+      setImageUri(uri);
+      console.log('Captured Photo URI:', uri);
     }
   };
 
+  // Function to upload the selected image
   const uploadImage = async () => {
     if (!imageUri) {
       Alert.alert('No image selected', 'Please select or take a photo first.');
       return;
     }
 
-    const fileType = imageUri.split('.').pop();
-    const mimeType = fileType === 'jpg' || fileType === 'jpeg' ? 'image/jpeg' : `image/${fileType}`;
+    if (!accessToken) {
+      Alert.alert('Error', 'No access token found. Please log in.');
+      return;
+    }
+
+    console.log('Uploading image as file');
 
     const formData = new FormData();
+    const fileName = imageUri.split('/').pop();
+    const fileType = `image/${fileName.split('.').pop()}`;
+
+    // Adjust the URI to remove "file://" for iOS
+    const adjustedUri = Platform.OS === 'ios' ? imageUri.replace('file://', '') : imageUri;
+
     formData.append('image', {
-      uri: imageUri,
-      type: mimeType,
-      name: `clothing_item.${fileType}`,
+      uri: adjustedUri,
+      name: fileName,
+      type: fileType,
     });
 
     try {
-      const token = 'YOUR_ACCESS_TOKEN';  // Replace with the valid token
       const response = await axios.post(
-        'https://drip-advisor-backend.vercel.app/add_clothing_item',
+        'https://drip-advisor-backend.vercel.app/add_clothing_item', // Backend URL
         formData,
         {
           headers: {
-            'Authorization': `Bearer ${token}`,
+            'Authorization': `Bearer ${accessToken}`, // Use access token for authentication
             'Content-Type': 'multipart/form-data',
           },
         }
       );
+
       Alert.alert('Image uploaded successfully!', response.data.message);
+      // Optionally, reset the image URI after successful upload
+      setImageUri(null); 
     } catch (error) {
       console.error('Error uploading image:', error.response ? error.response.data : error.message);
       Alert.alert('Upload failed', 'Unable to upload image. Please try again.');
