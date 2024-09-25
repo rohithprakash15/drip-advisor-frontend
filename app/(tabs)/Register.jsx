@@ -1,7 +1,7 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import React, { useState } from "react";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { View, StyleSheet, Text, TextInput, TouchableOpacity, Alert } from "react-native";
+import { View, StyleSheet, Text, TextInput, TouchableOpacity, Alert, ScrollView } from "react-native";
 import { useNavigation } from '@react-navigation/native';
 
 function Register() {
@@ -47,9 +47,9 @@ function Register() {
       const data = await response.json();
 
       if (response.ok && data.access_token) {
-        await AsyncStorage.setItem('access_token', data.access_token); // Save the token
+        await AsyncStorage.setItem('access_token', data.access_token); 
         Alert.alert("Success", "User created successfully", [
-          { text: "OK", onPress: () => navigation.navigate('Home') } // Navigate to Home after alert
+          { text: "OK", onPress: () => navigation.navigate('Home') } 
         ]);
       } else {
         Alert.alert("Error", data.message || "Registration failed");
@@ -59,8 +59,8 @@ function Register() {
       Alert.alert("Error", "Something went wrong. Please try again later.");
     }
   };
-
   return (
+    <ScrollView>
     <SafeAreaView style={styles.container}>
       <View style={styles.titleContainer}>
         <Text style={styles.titleText}>Welcome Onboard!</Text>
@@ -124,6 +124,7 @@ function Register() {
         </View>
       </View>
     </SafeAreaView>
+    </ScrollView>
   );
 }
 

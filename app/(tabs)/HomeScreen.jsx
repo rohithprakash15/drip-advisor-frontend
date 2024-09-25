@@ -11,6 +11,11 @@ function HomeScreen() {
         title="Go to Uploader"
         onPress={() => navigation.navigate('Uploader')}  // Navigates to Uploader screen
       />
+      <Button
+        title="Go to Profile"
+        onPress={() => navigation.navigate('Profile')}  // Navigates to Profile screen
+        style={{ marginTop: 10 }}  // Optional: Add some margin between the buttons
+      />
     </View>
   );
 }

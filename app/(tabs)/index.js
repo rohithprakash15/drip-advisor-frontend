@@ -6,7 +6,7 @@ import Login from "./LoginScreen";
 import Register from "./Register";
 import HomeScreen from "./HomeScreen";
 import Uploader from './UploadImageScreen';  // Ensure the correct path
-
+import Profile from './Profile';
 const Stack = createStackNavigator();
 
 export default function App() {
@@ -35,6 +35,8 @@ export default function App() {
         <Stack.Screen name="Register" component={Register} options={{ title: 'Register' }} />
         <Stack.Screen name="Home" component={HomeScreen} options={{ title: 'Home' }} />
         <Stack.Screen name="Uploader" component={Uploader} options={{ title: 'Uploader' }} />
+        <Stack.Screen name="Profile" component={Profile} options={{ title: 'Profile' }} />
+  
       </Stack.Navigator>
     </NavigationContainer>
   );

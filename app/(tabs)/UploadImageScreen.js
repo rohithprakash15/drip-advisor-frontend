@@ -9,50 +9,46 @@ const UploadImageScreen = () => {
 
   const selectImage = async () => {
     const permissionResult = await ImagePicker.requestMediaLibraryPermissionsAsync();
-    
     if (permissionResult.granted === false) {
       Alert.alert('Permission to access gallery is required!');
       return;
     }
-
     const result = await ImagePicker.launchImageLibraryAsync({ base64: true });
     if (!result.canceled) {
-      const imageUri = result.assets[0].uri;
-      setImageUri(imageUri);
-      await uploadImage(imageUri);
+      setImageUri(result.assets[0].uri);
     }
   };
 
   const takePhoto = async () => {
     const permissionResult = await Camera.requestCameraPermissionsAsync();
-    
     if (permissionResult.granted === false) {
       Alert.alert('Permission to access camera is required!');
       return;
     }
-
     const result = await ImagePicker.launchCameraAsync({ base64: true });
     if (!result.canceled) {
-      const imageUri = result.assets[0].uri;
-      setImageUri(imageUri);
-      await uploadImage(imageUri);
+      setImageUri(result.assets[0].uri);
     }
   };
 
-  const uploadImage = async (uri) => {
-    // Extract file extension to determine MIME type
-    const fileType = uri.split('.').pop();
+  const uploadImage = async () => {
+    if (!imageUri) {
+      Alert.alert('No image selected', 'Please select or take a photo first.');
+      return;
+    }
+
+    const fileType = imageUri.split('.').pop();
     const mimeType = fileType === 'jpg' || fileType === 'jpeg' ? 'image/jpeg' : `image/${fileType}`;
 
     const formData = new FormData();
     formData.append('image', {
-      uri: uri.startsWith('file://') ? uri : `file://${uri}`,  // Ensure proper URI format for Android
-      type: mimeType,  // Correct MIME type, e.g., 'image/jpeg'
-      name: `clothing_item.${fileType}`  // Use file extension from the URI
+      uri: imageUri,
+      type: mimeType,
+      name: `clothing_item.${fileType}`,
     });
 
     try {
-      const token = 'YOUR_ACCESS_TOKEN';  // Replace with the valid access token
+      const token = 'YOUR_ACCESS_TOKEN';  // Replace with the valid token
       const response = await axios.post(
         'https://drip-advisor-backend.vercel.app/add_clothing_item',
         formData,
@@ -76,6 +72,9 @@ const UploadImageScreen = () => {
       <Button title="Take Photo" onPress={takePhoto} />
       {imageUri && (
         <Image source={{ uri: imageUri }} style={styles.image} />
+      )}
+      {imageUri && (
+        <Button title="Upload Photo" onPress={uploadImage} />
       )}
     </View>
   );
