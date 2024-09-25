@@ -7,6 +7,8 @@ import Register from "./Register";
 import HomeScreen from "./HomeScreen";
 import Uploader from './UploadImageScreen';  // Ensure the correct path
 import Profile from './Profile';
+import Gemini from './Gemini';
+import UserSuggestion from "./UserSuggestion";
 const Stack = createStackNavigator();
 
 export default function App() {
@@ -36,6 +38,8 @@ export default function App() {
         <Stack.Screen name="Home" component={HomeScreen} options={{ title: 'Home' }} />
         <Stack.Screen name="Uploader" component={Uploader} options={{ title: 'Uploader' }} />
         <Stack.Screen name="Profile" component={Profile} options={{ title: 'Profile' }} />
+        <Stack.Screen name="UserSuggestion" component={UserSuggestion} options={{ title: 'UserSuggestion' }} />
+        <Stack.Screen name="Gemini" component={Gemini} options={{ title: 'Gemini' }} />
   
       </Stack.Navigator>
     </NavigationContainer>

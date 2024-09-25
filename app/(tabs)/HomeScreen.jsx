@@ -12,7 +12,7 @@ function HomeScreen() {
       setLoading(true);
 
       // Remove the JWT token from AsyncStorage (or wherever it's stored)
-      await AsyncStorage.removeItem('accessToken');
+      await AsyncStorage.removeItem('access_token');
       
       // Navigate back to the login screen
       navigation.reset({
@@ -38,6 +38,16 @@ function HomeScreen() {
         title="Go to Profile"
         onPress={() => navigation.navigate('Profile')}  // Navigates to Profile screen
         style={{ marginTop: 10 }}  // Optional: Add some margin between the buttons
+      />
+      <Button
+        title="Go to User Suggestions"  // New button for UserSuggestion screen
+        onPress={() => navigation.navigate('UserSuggestion')}  // Navigate to UserSuggestion screen
+        style={{ marginTop: 10 }}
+      />
+      <Button
+        title="Ask Gemini"  // New button for UserSuggestion screen
+        onPress={() => navigation.navigate('Gemini')}  // Navigate to UserSuggestion screen
+        style={{ marginTop: 10 }}
       />
       <Button
         title="Logout"
