@@ -70,11 +70,15 @@ const UploadImageScreen = () => {
     // Adjust the URI to remove "file://" for iOS
     const adjustedUri = Platform.OS === 'ios' ? imageUri.replace('file://', '') : imageUri;
 
-    formData.append('image', {
+    const imageDetails = {
       uri: adjustedUri,
       name: fileName,
       type: fileType,
-    });
+    };
+    
+    console.log('Image Details:', imageDetails); // Log image details
+
+    formData.append('image', imageDetails);
 
     try {
       const response = await axios.post(
@@ -88,6 +92,7 @@ const UploadImageScreen = () => {
         }
       );
 
+      console.log('Upload Response:', response.data); // Log response from server
       Alert.alert('Image uploaded successfully!', response.data.message);
       // Optionally, reset the image URI after successful upload
       setImageUri(null); 
