@@ -6,34 +6,44 @@ import {
   Image,
   SafeAreaView,
   FlatList,
+  Alert,
 } from 'react-native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 const UserSuggestion = () => {
   const [outfitCombinations, setOutfitCombinations] = useState([]);
+  const [accessToken, setAccessToken] = useState(null);
 
+  // Retrieve the access token when the component mounts
   useEffect(() => {
-    const fetchOutfits = async () => {
-      try {
-        const response = await fetch('https://drip-advisor-backend.vercel.app/outfits', {
-          method: 'GET',
-          headers: {
-            Authorization: 'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJmcmVzaCI6ZmFsc2UsImlhdCI6MTcyNzE0ODgzNywianRpIjoiNzk4NjFlOTktMDU5ZC00NTI2LWI1OTUtNjFjODk4ODIzNmRjIiwidHlwZSI6ImFjY2VzcyIsInN1YiI6IjIyejIzM0Bwc2d0ZWNoLmFjLmluIiwibmJmIjoxNzI3MTQ4ODM3LCJjc3JmIjoiNzJlMDgxZjQtNWJmNy00MjRhLTljMjgtOGFhMjc5YmNlMGVlIiwiZXhwIjoxNzI3MjM1MjM3fQ.XyG4NkkiMkH6na1eKRAdLjTiFSDSSOamzS2SkXIu2FE',
-          },
-        });
-
-        if (!response.ok) {
-          throw new Error('Failed to fetch outfits');
-        }
-
-        const data = await response.json();
-        setOutfitCombinations(data);
-      } catch (error) {
-        console.error(error);
-      }
+    const getToken = async () => {
+      const token = await AsyncStorage.getItem('access_token');
+      setAccessToken(token);
+      fetchOutfits(token); // Fetch outfits after setting the token
     };
-
-    fetchOutfits();
+    getToken();
   }, []);
+
+  const fetchOutfits = async (token) => {
+    try {
+      const response = await fetch('https://drip-advisor-backend.vercel.app/outfits', {
+        method: 'GET',
+        headers: {
+          Authorization: `Bearer ${token}`, // Use the retrieved access token
+        },
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to fetch outfits');
+      }
+
+      const data = await response.json();
+      setOutfitCombinations(data);
+    } catch (error) {
+      console.error(error);
+      Alert.alert('Error', 'Failed to load outfits. Please try again.');
+    }
+  };
 
   return (
     <SafeAreaView style={styles.container}>
