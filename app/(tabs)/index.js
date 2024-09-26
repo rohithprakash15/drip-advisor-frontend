@@ -10,6 +10,7 @@ import Profile from './Profile';
 import Gemini from './Gemini';
 import UserSuggestion from "./UserSuggestion";
 import WardrobeScreen from './WardrobeScreen';
+import OutfitScreen from './OutfitScreen';
 const Stack = createStackNavigator();
 
 export default function App() {
@@ -42,7 +43,7 @@ export default function App() {
         <Stack.Screen name="UserSuggestion" component={UserSuggestion} options={{ title: 'UserSuggestion' }} />
         <Stack.Screen name="Gemini" component={Gemini} options={{ title: 'Gemini' }} />
         <Stack.Screen name="WardrobeScreen" component={WardrobeScreen} options={{ title: 'WardrobeScreen' }} />
-  
+        <Stack.Screen name="OutfitScreen" component={OutfitScreen} options={{ title: 'OutfitScreen' }} />
       </Stack.Navigator>
     </NavigationContainer>
   );
