@@ -39,16 +39,7 @@ function HomeScreen() {
         onPress={() => navigation.navigate('Profile')}  // Navigates to Profile screen
         style={{ marginTop: 10 }}  // Optional: Add some margin between the buttons
       />
-      <Button
-        title="Go to User Suggestions"  // New button for UserSuggestion screen
-        onPress={() => navigation.navigate('UserSuggestion')}  // Navigate to UserSuggestion screen
-        style={{ marginTop: 10 }}
-      />
-      <Button
-        title="Ask Gemini"  // New button for UserSuggestion screen
-        onPress={() => navigation.navigate('Gemini')}  // Navigate to UserSuggestion screen
-        style={{ marginTop: 10 }}
-      />
+      
       <Button
       title="WardrobeScreen"  // New button for UserSuggestion screen
       onPress={() => navigation.navigate('WardrobeScreen')}  // Navigate to UserSuggestion screen

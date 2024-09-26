@@ -113,7 +113,7 @@ const UploadImageScreen = () => {
 
   return (
     <View style={styles.container}>
-      <Button title="Select Image from Gallery" onPress={selectImage} />
+    
       <Button title="Take Photo" onPress={takePhoto} />
       {imageUri && (
         <Image source={{ uri: imageUri }} style={styles.image} />
