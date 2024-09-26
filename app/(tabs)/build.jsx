@@ -10,7 +10,8 @@ import {
   TextInput, 
   KeyboardAvoidingView, 
   Platform, 
-  ScrollView 
+  ScrollView,
+  TouchableOpacity 
 } from 'react-native';
 import axios from 'axios';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -81,6 +82,33 @@ const GeneratedOutfitsScreen = ({ route }) => {
     }
   };
 
+  const markOutfitAsUsed = async (outfitId) => {
+    try {
+      const token = await AsyncStorage.getItem('access_token');
+      if (!token) {
+        Alert.alert('Error', 'No access token found.');
+        return;
+      }
+
+      // Make a POST request to mark the outfit as used
+      const response = await axios.post(
+        `${baseUrl}outfits/use/${outfitId}`,
+        {}, // No body needed as per documentation
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        }
+      );
+
+      // Handle success response
+      Alert.alert('Success', response.data.message || 'Outfit marked as used!');
+    } catch (error) {
+      console.error('Error marking outfit as used:', error.response ? error.response.data : error.message);
+      Alert.alert('Error', 'Unable to mark outfit as used. Please try again.');
+    }
+  };
+
   const renderOutfit = ({ item }) => (
     <View style={styles.outfitContainer}>
       <Text style={styles.outfitName}>{item.name}</Text>
@@ -93,11 +121,14 @@ const GeneratedOutfitsScreen = ({ route }) => {
         renderItem={({ item }) => (
           <View style={styles.clothingItemContainer}>
             <Image source={{ uri: item.path }} style={styles.clothingImage} />
-            {/* <Text>{item.description}</Text> */}
           </View>
         )}
         horizontal
       />
+      
+      <TouchableOpacity onPress={() => markOutfitAsUsed(item._id)} style={styles.radioButton}>
+        <Text>Use</Text>
+      </TouchableOpacity>
     </View>
   );
 
@@ -180,6 +211,14 @@ const styles = StyleSheet.create({
     height: 100,
     borderRadius: 10,
   },
+  radioButton: {
+    marginTop:10,
+    paddingVertical:5,
+    paddingHorizontal:10,
+    backgroundColor:'#ddd',
+    borderRadius:5,
+    alignItems:'center'
+  }
 });
 
 export default GeneratedOutfitsScreen;
