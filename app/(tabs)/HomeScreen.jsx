@@ -6,6 +6,7 @@ import { Ionicons } from '@expo/vector-icons';
 
 function HomeScreen() {
   const navigation = useNavigation();
+  const navigation = useNavigation();
   const [loading, setLoading] = useState(false);
 
   const handleLogout = async () => {
@@ -14,6 +15,7 @@ function HomeScreen() {
       await AsyncStorage.removeItem('access_token');
       navigation.reset({
         index: 0,
+        routes: [{ name: 'Login' }],
         routes: [{ name: 'Login' }],
       });
       Alert.alert('Success', 'You have logged out successfully.');
