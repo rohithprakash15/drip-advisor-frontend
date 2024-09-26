@@ -75,10 +75,13 @@ const UploadImageScreen = () => {
       name: fileName,
       type: fileType,
     };
-    
+
     console.log('Image Details:', imageDetails); // Log image details
 
     formData.append('image', imageDetails);
+
+    // Add the "path" field that the server expects
+    formData.append('path', fileName); // You can customize this value
 
     try {
       const response = await axios.post(
