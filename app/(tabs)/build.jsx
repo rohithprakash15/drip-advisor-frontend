@@ -1,30 +1,48 @@
-import React, { useState } from 'react';
-import { View, Text, Image, FlatList, StyleSheet, ActivityIndicator, Alert, TextInput, Button } from 'react-native';
-import AsyncStorage from '@react-native-async-storage/async-storage';
+import React, { useState, useEffect } from 'react';
+import { 
+  View, 
+  Text, 
+  Button, 
+  FlatList, 
+  StyleSheet, 
+  Alert, 
+  Image, 
+  TextInput, 
+  KeyboardAvoidingView, 
+  Platform, 
+  ScrollView 
+} from 'react-native';
 import axios from 'axios';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
-// Component to render individual clothing items with image and description
-const ClothingItem = ({ item, baseUrl }) => {
-  return (
-    <View style={styles.clothingItemContainer}>
-      <Image source={{ uri: `${baseUrl}${item.image}` }} style={styles.itemImage} />
-      <Text style={styles.itemDescription}>{item.description}</Text>
-    </View>
-  );
-};
-
-// Main Component to render generated outfits
 const GeneratedOutfitsScreen = ({ route }) => {
   const [outfits, setOutfits] = useState([]);
   const [loading, setLoading] = useState(false);
-  const [weatherDescription, setWeatherDescription] = useState('');
-  const [temperature, setTemperature] = useState('');
-  const [dayDescription, setDayDescription] = useState('');
+  const [accessToken, setAccessToken] = useState(null);
+  const baseUrl = 'https://drip-advisor-backend.vercel.app/';
+  
+  const [weatherDescription, setWeatherDescription] = useState(''); 
+  const [temperature, setTemperature] = useState(''); 
+  const [dayDescription, setDayDescription] = useState(''); 
   const { selectedItems } = route.params;
 
-  const baseUrl = 'https://drip-advisor-backend.vercel.app/';
+  useEffect(() => {
+    const getToken = async () => {
+      try {
+        const token = await AsyncStorage.getItem('access_token');
+        if (token) {
+          setAccessToken(token);
+        } else {
+          console.log('No access token found.');
+        }
+      } catch (error) {
+        console.error('Error retrieving token:', error);
+      }
+    };
+    getToken();
+  }, []);
 
-  const fetchOutfits = async () => {
+  const generateOutfits = async () => {
     setLoading(true);
     try {
       const token = await AsyncStorage.getItem('access_token');
@@ -36,7 +54,7 @@ const GeneratedOutfitsScreen = ({ route }) => {
 
       const requestData = {
         weather_description: weatherDescription,
-        temperature: temperature,
+        temperature: parseFloat(temperature),
         day_description: dayDescription,
         base_items_ids: selectedItems,
       };
@@ -56,89 +74,83 @@ const GeneratedOutfitsScreen = ({ route }) => {
       console.log('API Response:', response.data);
       setOutfits(response.data);
     } catch (error) {
-      console.error('Error fetching outfits:', error.response ? error.response.data : error.message);
+      console.error('Error generating outfits:', error.response ? error.response.data : error.message);
       Alert.alert('Error', 'Unable to generate outfits. Please try again.');
     } finally {
       setLoading(false);
     }
   };
 
-  // Render each outfit along with its clothing items
-  const renderOutfit = ({ item: outfit }) => (
+  const renderOutfit = ({ item }) => (
     <View style={styles.outfitContainer}>
-      <Text style={styles.outfitTitle}>{outfit.name}</Text>
-      <Text style={styles.outfitDescription}>{outfit.description}</Text>
+      <Text style={styles.outfitName}>{item.name}</Text>
+      <Text>{item.description}</Text>
+      <Text style={styles.stylingTips}>{item.styling_tips}</Text>
 
-      {/* Render Clothing Items */}
       <FlatList
-        data={outfit.clothing_items_list}
-        renderItem={({ item }) => <ClothingItem item={item} baseUrl={baseUrl} />}
-        keyExtractor={(item) => item._id}
-        horizontal={true}
-        showsHorizontalScrollIndicator={false}
+        data={item.clothing_items_list}
+        keyExtractor={(clothingItem) => clothingItem._id}
+        renderItem={({ item }) => (
+          <View style={styles.clothingItemContainer}>
+            <Image source={{ uri: item.path }} style={styles.clothingImage} />
+            {/* <Text>{item.description}</Text> */}
+          </View>
+        )}
+        horizontal
       />
-
-      <Text style={styles.stylingTips}>Styling Tips: {outfit.styling_tips}</Text>
     </View>
   );
 
   return (
-    <FlatList
-      data={outfits}
-      renderItem={renderOutfit}
-      keyExtractor={(item) => item._id}
-      ListHeaderComponent={() => (
-        <View style={styles.headerContainer}>
-          <Text style={styles.header}>Generate Outfits</Text>
-          <TextInput
-            placeholder="Weather Description"
-            value={weatherDescription}
-            onChangeText={setWeatherDescription}
-            style={styles.input}
-          />
-          <TextInput
-            placeholder="Temperature (°C)"
-            value={temperature}
-            onChangeText={setTemperature}
-            keyboardType="numeric"
-            style={styles.input}
-          />
-          <TextInput
-            placeholder="Day Description"
-            value={dayDescription}
-            onChangeText={setDayDescription}
-            style={styles.input}
-          />
-          <Button title="Generate Outfits" onPress={fetchOutfits} />
-        </View>
-      )}
-      ListEmptyComponent={
-        loading ? (
-          <ActivityIndicator size="large" color="#007bff" />
+    <KeyboardAvoidingView
+      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+      style={styles.container}
+    >
+      <ScrollView>
+        <TextInput
+          placeholder="Weather Description"
+          value={weatherDescription}
+          onChangeText={setWeatherDescription}
+          style={styles.input}
+          blurOnSubmit={false}
+        />
+        <TextInput
+          placeholder="Temperature (°C)"
+          value={temperature}
+          onChangeText={setTemperature}
+          keyboardType="numeric"
+          style={styles.input}
+          blurOnSubmit={false}
+        />
+        <TextInput
+          placeholder="Day Description"
+          value={dayDescription}
+          onChangeText={setDayDescription}
+          style={styles.input}
+          blurOnSubmit={false}
+        />
+        <Button title="Generate Outfits" onPress={generateOutfits} disabled={loading} />
+        
+        {loading ? (
+          <Text>Loading...</Text>
         ) : (
-          <Text style={styles.noOutfitText}>No outfits generated</Text>
-        )
-      }
-    />
+          <FlatList
+            data={outfits}
+            keyExtractor={(item) => item._id}
+            renderItem={renderOutfit}
+            showsVerticalScrollIndicator={false}
+          />
+        )}
+      </ScrollView>
+    </KeyboardAvoidingView>
   );
 };
 
-// Styles for the components
 const styles = StyleSheet.create({
   container: {
     flex: 1,
     padding: 16,
     backgroundColor: '#fff',
-  },
-  headerContainer: {
-    padding: 16,
-    backgroundColor: '#fff',
-  },
-  header: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    marginBottom: 20,
-    textAlign: 'center',
   },
   input: {
     height: 40,
@@ -150,42 +162,23 @@ const styles = StyleSheet.create({
   },
   outfitContainer: {
     marginBottom: 20,
-    borderBottomWidth: 1,
-    borderColor: '#ccc',
-    paddingBottom: 20,
   },
-  outfitTitle: {
+  outfitName: {
     fontSize: 20,
     fontWeight: 'bold',
-    marginBottom: 8,
-  },
-  outfitDescription: {
-    fontSize: 16,
-    marginBottom: 8,
   },
   stylingTips: {
-    fontSize: 14,
     fontStyle: 'italic',
-    marginTop: 10,
+    marginVertical: 5,
   },
   clothingItemContainer: {
     marginRight: 10,
     alignItems: 'center',
   },
-  itemImage: {
+  clothingImage: {
     width: 100,
     height: 100,
     borderRadius: 10,
-  },
-  itemDescription: {
-    fontSize: 12,
-    textAlign: 'center',
-    marginTop: 5,
-    width: 100,
-  },
-  noOutfitText: {
-    fontSize: 16,
-    textAlign: 'center',
   },
 });
 
