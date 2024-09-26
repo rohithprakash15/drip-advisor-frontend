@@ -1,11 +1,13 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, Button, FlatList, StyleSheet, Alert, Image, TextInput } from 'react-native';
+import { View, Text, Button, FlatList, StyleSheet, Alert, Image, TextInput, TouchableOpacity } from 'react-native';
 import axios from 'axios';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { RadioButton } from 'react-native-paper';
 
 const OutfitScreen = () => {
   const [outfits, setOutfits] = useState([]);
   const [accessToken, setAccessToken] = useState(null);
+  const [selectedOutfitId, setSelectedOutfitId] = useState(null); // Track selected outfit
   const baseUrl = 'https://drip-advisor-backend.vercel.app/';
   
   // New state variables for user input
@@ -60,30 +62,48 @@ const OutfitScreen = () => {
 
       setOutfits(response.data);
 
-      // Log each outfit and its clothing items
-      response.data.forEach(outfit => {
-        console.log('Outfit Name:', outfit.name);
-        console.log('Outfit Description:', outfit.description);
-        console.log('Styling Tips:', outfit.styling_tips);
-
-        // Iterate through clothing items
-        outfit.clothing_items_list.forEach((clothingItem, index) => {
-          console.log(`Clothing Item ${index + 1}:`);
-          console.log('Description:', clothingItem.description);
-          console.log('Image Path:', clothingItem.path); // Ensure this exists
-          console.log('Other Properties:', clothingItem);
-        });
-      });
-
     } catch (error) {
       console.error('Error generating outfits:', error.response ? error.response.data : error.message);
       Alert.alert('Error', 'Unable to generate outfits. Please try again.');
     }
   };
 
+  // Function to use a selected outfit
+  const useOutfit = async () => {
+    if (!selectedOutfitId) {
+      Alert.alert('Error', 'Please select an outfit.');
+      return;
+    }
+
+    try {
+      const response = await axios.post(
+        `${baseUrl}outfits/use/${selectedOutfitId}`,
+        {},
+        {
+          headers: {
+            'Authorization': `Bearer ${accessToken}`,
+          }
+        }
+      );
+
+      Alert.alert('Success', 'Outfit used successfully! Items are now unavailable for 48 hours.');
+    } catch (error) {
+      console.error('Error using outfit:', error.response ? error.response.data : error.message);
+      Alert.alert('Error', 'Unable to use outfit. Please try again.');
+    }
+  };
+
   const renderOutfit = ({ item }) => (
     <View style={styles.outfitContainer}>
-      <Text style={styles.outfitName}>{item.name}</Text>
+      <View style={styles.radioContainer}>
+        {/* Radio button for selecting an outfit */}
+        <RadioButton
+          value={item._id}
+          status={selectedOutfitId === item._id ? 'checked' : 'unchecked'}
+          onPress={() => setSelectedOutfitId(item._id)} // Set the selected outfit ID
+        />
+        <Text style={styles.outfitName}>{item.name}</Text>
+      </View>
       <Text>{item.description}</Text>
       <Text style={styles.stylingTips}>{item.styling_tips}</Text>
 
@@ -93,7 +113,6 @@ const OutfitScreen = () => {
         renderItem={({ item }) => (
           <View style={styles.clothingItemContainer}>
             <Image source={{ uri: item.path }} style={styles.clothingImage} />
-            {/* <Text>{item.description}</Text> */}
           </View>
         )}
         horizontal
@@ -123,12 +142,18 @@ const OutfitScreen = () => {
         style={styles.input}
       />
       <Button title="Generate Outfits" onPress={generateOutfits} />
+      
       <FlatList
         data={outfits}
         keyExtractor={(item) => item._id}
         renderItem={renderOutfit}
         showsVerticalScrollIndicator={false}
       />
+
+      {/* Button to use the selected outfit */}
+      <TouchableOpacity onPress={useOutfit} style={styles.useOutfitButton}>
+        <Text style={styles.useOutfitButtonText}>Use This Outfit</Text>
+      </TouchableOpacity>
     </View>
   );
 };
@@ -166,6 +191,22 @@ const styles = StyleSheet.create({
     width: 100,
     height: 100,
     borderRadius: 10,
+  },
+  useOutfitButton: {
+    marginTop: 20,
+    backgroundColor: '#007BFF',
+    paddingVertical: 10,
+    borderRadius: 5,
+    alignItems: 'center',
+  },
+  useOutfitButtonText: {
+    color: '#fff',
+    fontWeight: 'bold',
+    fontSize: 16,
+  },
+  radioContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
   },
 });
 
