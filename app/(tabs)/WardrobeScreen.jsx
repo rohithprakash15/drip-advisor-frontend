@@ -1,12 +1,16 @@
 import React, { useEffect, useState } from 'react';
-import { View, Text, FlatList, Image, StyleSheet, Alert } from 'react-native';
+import { View, Text, FlatList, Image, StyleSheet, Alert, TouchableOpacity, ScrollView } from 'react-native';
 import axios from 'axios';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { Checkbox } from 'react-native-paper';
+import { useNavigation } from '@react-navigation/native'; // Import the useNavigation hook
 
 const WardrobeScreen = () => {
   const [clothingItems, setClothingItems] = useState([]);
   const [accessToken, setAccessToken] = useState(null);
+  const [selectedItems, setSelectedItems] = useState([]);
   const baseUrl = 'https://drip-advisor-backend.vercel.app/';
+  const navigation = useNavigation(); // Initialize navigation
 
   // Fetch access token from AsyncStorage on component mount
   useEffect(() => {
@@ -50,11 +54,27 @@ const WardrobeScreen = () => {
   }, [accessToken]);
 
   const getImageUri = (item) => {
-    // Check if the path is a local file URI or a server-stored image
     if (item.path && item.path.startsWith('file://')) {
-      return item.path; // Local file URI
+      return item.path;
     } else {
-      return `${baseUrl}${item.image}`; // Server-stored image
+      return `${baseUrl}${item.image}`;
+    }
+  };
+
+  const handleCheckboxToggle = (id) => {
+    setSelectedItems((prevSelectedItems) =>
+      prevSelectedItems.includes(id)
+        ? prevSelectedItems.filter((itemId) => itemId !== id)
+        : [...prevSelectedItems, id]
+    );
+  };
+
+  const handleBuildPress = () => {
+    if (selectedItems.length > 0) {
+      // Navigate to the Build screen with selected items
+      navigation.navigate('build', { selectedItems });
+    } else {
+      Alert.alert('No items selected', 'Please select items to build your outfit.');
     }
   };
 
@@ -62,21 +82,34 @@ const WardrobeScreen = () => {
     <View style={styles.itemContainer}>
       <Image source={{ uri: getImageUri(item) }} style={styles.image} />
       <Text style={styles.itemText}>{item.description}</Text>
+      <View style={styles.checkboxContainer}>
+        <Checkbox
+          status={selectedItems.includes(item._id) ? 'checked' : 'unchecked'}
+          onPress={() => handleCheckboxToggle(item._id)}
+        />
+        <Text style={styles.checkboxText}>Select</Text>
+      </View>
     </View>
   );
 
   return (
     <View style={styles.container}>
       <Text style={styles.header}>Your Wardrobe</Text>
-      {clothingItems.length > 0 ? (
-        <FlatList
-          data={clothingItems}
-          keyExtractor={(item) => item._id}
-          renderItem={renderClothingItem}
-        />
-      ) : (
-        <Text style={styles.noItemsText}>No clothing items found</Text>
-      )}
+      <ScrollView contentContainerStyle={styles.scrollContainer}>
+        {clothingItems.length > 0 ? (
+          <FlatList
+            data={clothingItems}
+            keyExtractor={(item) => item._id}
+            renderItem={renderClothingItem}
+          />
+        ) : (
+          <Text style={styles.noItemsText}>No clothing items found</Text>
+        )}
+
+        <TouchableOpacity style={styles.buildButton} onPress={handleBuildPress}>
+          <Text style={styles.buildButtonText}>Build</Text>
+        </TouchableOpacity>
+      </ScrollView>
     </View>
   );
 };
@@ -86,6 +119,10 @@ const styles = StyleSheet.create({
     flex: 1,
     padding: 16,
     backgroundColor: '#fff',
+  },
+  scrollContainer: {
+    flexGrow: 1,
+    justifyContent: 'space-between',
   },
   header: {
     fontSize: 24,
@@ -107,9 +144,30 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     textAlign: 'center',
   },
+  checkboxContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginTop: 10,
+  },
+  checkboxText: {
+    marginLeft: 8,
+    fontSize: 16,
+  },
   noItemsText: {
     fontSize: 16,
     textAlign: 'center',
+  },
+  buildButton: {
+    backgroundColor: '#007bff',
+    padding: 15,
+    borderRadius: 10,
+    alignItems: 'center',
+    marginTop: 20,
+  },
+  buildButtonText: {
+    color: '#fff',
+    fontSize: 18,
+    fontWeight: 'bold',
   },
 });
 

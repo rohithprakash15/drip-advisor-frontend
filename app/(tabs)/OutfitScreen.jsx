@@ -1,50 +1,46 @@
 import React, { useState, useEffect } from 'react';
-import { 
-  View, 
-  Text, 
-  StyleSheet, 
-  FlatList, 
-  Image, 
-  TextInput, 
-  TouchableOpacity, 
-  Alert
-} from 'react-native';
+import { View, Text, Button, FlatList, StyleSheet, Alert, Image, TextInput } from 'react-native';
 import axios from 'axios';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
 const OutfitScreen = () => {
   const [outfits, setOutfits] = useState([]);
-  const [weatherDescription, setWeatherDescription] = useState('');
-  const [temperature, setTemperature] = useState('');
-  const [dayDescription, setDayDescription] = useState('');
   const [accessToken, setAccessToken] = useState(null);
   const baseUrl = 'https://drip-advisor-backend.vercel.app/';
+  
+  // New state variables for user input
+  const [weatherDescription, setWeatherDescription] = useState(''); // User input for weather description
+  const [temperature, setTemperature] = useState(''); // User input for temperature
+  const [dayDescription, setDayDescription] = useState(''); // User input for day description
 
+  // Fetch access token from AsyncStorage on component mount
   useEffect(() => {
     const getToken = async () => {
-      const token = await AsyncStorage.getItem('access_token');
-      setAccessToken(token);
+      try {
+        const token = await AsyncStorage.getItem('access_token');
+        if (token) {
+          setAccessToken(token);
+        } else {
+          console.log('No access token found.');
+        }
+      } catch (error) {
+        console.error('Error retrieving token:', error);
+      }
     };
     getToken();
   }, []);
 
+  // Function to generate outfits
   const generateOutfits = async () => {
     if (!accessToken) {
       Alert.alert('Error', 'No access token found. Please log in.');
       return;
     }
 
-    if (!weatherDescription || !temperature) {
-      Alert.alert('Error', 'Weather description and temperature are required.');
+    if (!weatherDescription || !temperature || !dayDescription) {
+      Alert.alert('Error', 'All fields are required.');
       return;
     }
-
-    console.log("Generating outfits with the following data:");
-    console.log({
-      weather_description: weatherDescription,
-      temperature: parseFloat(temperature),
-      day_description: dayDescription,
-    });
 
     try {
       const response = await axios.post(
@@ -61,145 +57,106 @@ const OutfitScreen = () => {
           }
         }
       );
+
       setOutfits(response.data);
-      console.log("Outfits generated successfully:", response.data);
-      
+
+      // Log each outfit and its clothing items
+      response.data.forEach(outfit => {
+        console.log('Outfit Name:', outfit.name);
+        console.log('Outfit Description:', outfit.description);
+        console.log('Styling Tips:', outfit.styling_tips);
+
+        // Iterate through clothing items
+        outfit.clothing_items_list.forEach((clothingItem, index) => {
+          console.log(`Clothing Item ${index + 1}:`);
+          console.log('Description:', clothingItem.description);
+          console.log('Image Path:', clothingItem.path); // Ensure this exists
+          console.log('Other Properties:', clothingItem);
+        });
+      });
+
     } catch (error) {
       console.error('Error generating outfits:', error.response ? error.response.data : error.message);
       Alert.alert('Error', 'Unable to generate outfits. Please try again.');
     }
   };
 
-  const getImageUri = (item) => {
-    // Check if the path is a local file URI or a server-stored image
-    if (item.path && item.path.startsWith('file://')) {
-      return item.path; // Local file URI
-    } else {
-      return `${baseUrl}${item.image}`; // Server-stored image
-    }
-  };
-
-  const renderClothingItem = ({ item }) => (
-    <View style={styles.clothingItemContainer}>
-      <Image source={{ uri: getImageUri(item) }} style={styles.clothingImage} />
-      <Text style={styles.clothingText}>{item.description}</Text>
-    </View>
-  );
-
   const renderOutfit = ({ item }) => (
     <View style={styles.outfitContainer}>
       <Text style={styles.outfitName}>{item.name}</Text>
-      <Text style={styles.outfitDescription}>{item.description}</Text>
-      
-      <Text style={styles.clothingSectionTitle}>Clothing Items:</Text>
+      <Text>{item.description}</Text>
+      <Text style={styles.stylingTips}>{item.styling_tips}</Text>
+
       <FlatList
         data={item.clothing_items_list}
         keyExtractor={(clothingItem) => clothingItem._id}
-        renderItem={renderClothingItem}
+        renderItem={({ item }) => (
+          <View style={styles.clothingItemContainer}>
+            <Image source={{ uri: item.path }} style={styles.clothingImage} />
+            {/* <Text>{item.description}</Text> */}
+          </View>
+        )}
         horizontal
-        showsHorizontalScrollIndicator={false}
       />
-      
-      <Text style={styles.stylingTips}>Styling Tips: {item.styling_tips}</Text>
     </View>
   );
 
-  // FlatList with header components for inputs
   return (
-    <FlatList
-      ListHeaderComponent={
-        <>
-          <Text style={styles.header}>Outfit Suggestions</Text>
-          
-          <TextInput
-            style={styles.input}
-            placeholder="Weather Description"
-            value={weatherDescription}
-            onChangeText={setWeatherDescription}
-          />
-          <TextInput
-            style={styles.input}
-            placeholder="Temperature (°C)"
-            value={temperature}
-            onChangeText={setTemperature}
-            keyboardType="numeric"
-          />
-          <TextInput
-            style={styles.input}
-            placeholder="Day Description (optional)"
-            value={dayDescription}
-            onChangeText={setDayDescription}
-          />
-          
-          <TouchableOpacity style={styles.button} onPress={generateOutfits}>
-            <Text style={styles.buttonText}>Generate Outfits</Text>
-          </TouchableOpacity>
-        </>
-      }
-      data={outfits}
-      keyExtractor={(item) => item._id}
-      renderItem={renderOutfit}
-      contentContainerStyle={styles.container}
-      ListEmptyComponent={<Text style={styles.noOutfitsText}>No outfits generated yet</Text>}
-    />
+    <View style={styles.container}>
+      <TextInput
+        placeholder="Weather Description"
+        value={weatherDescription}
+        onChangeText={setWeatherDescription}
+        style={styles.input}
+      />
+      <TextInput
+        placeholder="Temperature (°C)"
+        value={temperature}
+        onChangeText={setTemperature}
+        keyboardType="numeric"
+        style={styles.input}
+      />
+      <TextInput
+        placeholder="Day Description"
+        value={dayDescription}
+        onChangeText={setDayDescription}
+        style={styles.input}
+      />
+      <Button title="Generate Outfits" onPress={generateOutfits} />
+      <FlatList
+        data={outfits}
+        keyExtractor={(item) => item._id}
+        renderItem={renderOutfit}
+        showsVerticalScrollIndicator={false}
+      />
+    </View>
   );
 };
 
 const styles = StyleSheet.create({
   container: {
+    flex: 1,
     padding: 16,
     backgroundColor: '#fff',
-  },
-  header: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    marginBottom: 20,
-    textAlign: 'center',
   },
   input: {
     height: 40,
     borderColor: 'gray',
     borderWidth: 1,
-    marginBottom: 10,
+    borderRadius: 5,
     paddingHorizontal: 10,
-    borderRadius: 5,
-  },
-  button: {
-    backgroundColor: '#007bff',
-    padding: 10,
-    borderRadius: 5,
-    alignItems: 'center',
-    marginBottom: 20,
-  },
-  buttonText: {
-    color: '#fff',
-    fontSize: 16,
-    fontWeight: 'bold',
+    marginBottom: 10,
   },
   outfitContainer: {
-    marginBottom: 30,
-    padding: 16,
-    backgroundColor: '#f9f9f9',
-    borderRadius: 10,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.2,
-    shadowRadius: 4,
-    elevation: 2,
+    marginBottom: 20,
   },
   outfitName: {
     fontSize: 20,
     fontWeight: 'bold',
-    marginBottom: 10,
   },
-  outfitDescription: {
-    fontSize: 16,
-    marginBottom: 10,
-  },
-  clothingSectionTitle: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    marginBottom: 10,
+  stylingTips: {
+    fontStyle: 'italic',
+    marginVertical: 5,
   },
   clothingItemContainer: {
     marginRight: 10,
@@ -208,22 +165,7 @@ const styles = StyleSheet.create({
   clothingImage: {
     width: 100,
     height: 100,
-    borderRadius: 8,
-  },
-  clothingText: {
-    marginTop: 8,
-    fontSize: 14,
-    textAlign: 'center',
-  },
-  stylingTips: {
-    fontSize: 16,
-    fontStyle: 'italic',
-    marginTop: 10,
-  },
-  noOutfitsText: {
-    fontSize: 16,
-    textAlign: 'center',
-    marginTop: 20,
+    borderRadius: 10,
   },
 });
 
