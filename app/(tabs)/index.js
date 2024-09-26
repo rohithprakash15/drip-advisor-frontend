@@ -1,21 +1,23 @@
-import React, { useEffect, useState } from "react";
+import React from "react";
 import { NavigationContainer } from "@react-navigation/native";
 import { createStackNavigator } from "@react-navigation/stack";
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { StatusBar } from 'react-native';
 import Login from "./LoginScreen";
 import Register from "./Register";
 import HomeScreen from "./HomeScreen";
-import Uploader from './UploadImageScreen';  // Ensure the correct path
+import Uploader from './UploadImageScreen';
 import Profile from './Profile';
 import WardrobeScreen from './WardrobeScreen';
-import OutfitScreen from './OutfitScreen';
-import build from './build'
+import DailySuggestionScreen from './DailySuggestionScreen';
+import build from './build';
+
 const Stack = createStackNavigator();
 
 export default function App() {
-  const [initialRoute, setInitialRoute] = useState(null);
+  const [initialRoute, setInitialRoute] = React.useState(null);
 
-  useEffect(() => {
+  React.useEffect(() => {
     const checkAccessToken = async () => {
       try {
         const token = await AsyncStorage.getItem('access_token');
@@ -33,16 +35,26 @@ export default function App() {
 
   return (
     <NavigationContainer independent={true}>
-      <Stack.Navigator initialRouteName={initialRoute}>
-        <Stack.Screen name="Login" component={Login} options={{ title: 'Login' }} />
-        <Stack.Screen name="Register" component={Register} options={{ title: 'Register' }} />
-        <Stack.Screen name="Home" component={HomeScreen} options={{ title: 'Home' }} />
-        <Stack.Screen name="Uploader" component={Uploader} options={{ title: 'Uploader' }} />
-        <Stack.Screen name="Profile" component={Profile} options={{ title: 'Profile' }} />
-        <Stack.Screen name="WardrobeScreen" component={WardrobeScreen} options={{ title: 'WardrobeScreen' }} />
-        <Stack.Screen name="OutfitScreen" component={OutfitScreen} options={{ title: 'OutfitScreen' }} />
-        <Stack.Screen name="build" component={build} options={{ title: 'build' }} />
-
+      <StatusBar
+        barStyle="dark-content"
+        backgroundColor="transparent"
+        translucent={true}
+      />
+      <Stack.Navigator 
+        initialRouteName={initialRoute}
+        screenOptions={{
+          headerShown: false,
+          cardStyle: { backgroundColor: '#f0f0f0' }
+        }}
+      >
+        <Stack.Screen name="Login" component={Login} />
+        <Stack.Screen name="Register" component={Register} />
+        <Stack.Screen name="Home" component={HomeScreen} />
+        <Stack.Screen name="Uploader" component={Uploader} />
+        <Stack.Screen name="Profile" component={Profile} />
+        <Stack.Screen name="WardrobeScreen" component={WardrobeScreen} />
+        <Stack.Screen name="DailySuggestion" component={DailySuggestionScreen} />
+        <Stack.Screen name="build" component={build} />
       </Stack.Navigator>
     </NavigationContainer>
   );

@@ -1,8 +1,9 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import React, { useState } from "react";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { View, StyleSheet, Text, TextInput, TouchableOpacity, Alert, ScrollView } from "react-native";
+import { View, StyleSheet, Text, TextInput, TouchableOpacity, Alert, ScrollView, KeyboardAvoidingView, Platform } from "react-native";
 import { useNavigation } from '@react-navigation/native';
+import { Ionicons } from '@expo/vector-icons';
 
 function Register() {
   const navigation = useNavigation();
@@ -60,128 +61,176 @@ function Register() {
     }
   };
   return (
-    <ScrollView>
-    <SafeAreaView style={styles.container}>
-      <View style={styles.titleContainer}>
-        <Text style={styles.titleText}>Welcome Onboard!</Text>
-      </View>
-      <View style={styles.formContainer}>
-        <TextInput
-          style={styles.input}
-          placeholder="Enter name"
-          value={name}
-          onChangeText={setName}
-        />
-        <TextInput
-          style={styles.input}
-          placeholder="Enter email"
-          keyboardType="email-address"
-          value={email}
-          onChangeText={setEmail}
-        />
-        <TextInput
-          style={styles.input}
-          placeholder="Enter your Mobile Number"
-          keyboardType="phone-pad"
-          value={mobile}
-          onChangeText={setMobile}
-        />
-        <TextInput
-          style={styles.input}
-          placeholder="Enter password"
-          secureTextEntry={true}
-          value={password}
-          onChangeText={setPassword}
-        />
-        <TextInput
-          style={styles.input}
-          placeholder="Confirm Password"
-          secureTextEntry={true}
-          value={confirmPassword}
-          onChangeText={setConfirmPassword}
-        />
-        <TextInput
-          style={styles.input}
-          placeholder="Enter Gender (e.g., male/female)"
-          value={gender}
-          onChangeText={setGender}
-        />
-        <TextInput
-          style={styles.input}
-          placeholder="Enter Date of Birth (YYYY-MM-DD)"
-          value={dob}
-          onChangeText={setDob}
-        />
-        <TouchableOpacity style={styles.button} onPress={handleRegister}>
-          <Text style={styles.buttonText}>Register</Text>
-        </TouchableOpacity>
-
-        <View style={styles.loginContainer}>
-          <Text style={styles.loginText}>Already have an account? </Text>
-          <TouchableOpacity onPress={() => navigation.navigate('Login')}>
-            <Text style={styles.loginButton}>Login</Text>
-          </TouchableOpacity>
-        </View>
-      </View>
-    </SafeAreaView>
-    </ScrollView>
+    <KeyboardAvoidingView 
+      behavior={Platform.OS === "ios" ? "padding" : "height"}
+      style={styles.container}
+    >
+      <ScrollView contentContainerStyle={styles.scrollView}>
+        <SafeAreaView style={styles.safeArea}>
+          <View style={styles.header}>
+            <Ionicons name="person-add-outline" size={80} color="#50C2C9" />
+            <Text style={styles.titleText}>Create Account</Text>
+          </View>
+          <View style={styles.formContainer}>
+            <View style={styles.inputContainer}>
+              <Ionicons name="person-outline" size={24} color="#999" style={styles.inputIcon} />
+              <TextInput
+                style={styles.input}
+                placeholder="Full Name"
+                value={name}
+                onChangeText={setName}
+              />
+            </View>
+            <View style={styles.inputContainer}>
+              <Ionicons name="mail-outline" size={24} color="#999" style={styles.inputIcon} />
+              <TextInput
+                style={styles.input}
+                placeholder="Email Address"
+                keyboardType="email-address"
+                value={email}
+                onChangeText={setEmail}
+              />
+            </View>
+            <View style={styles.inputContainer}>
+              <Ionicons name="call-outline" size={24} color="#999" style={styles.inputIcon} />
+              <TextInput
+                style={styles.input}
+                placeholder="Mobile Number"
+                keyboardType="phone-pad"
+                value={mobile}
+                onChangeText={setMobile}
+              />
+            </View>
+            <View style={styles.inputContainer}>
+              <Ionicons name="lock-closed-outline" size={24} color="#999" style={styles.inputIcon} />
+              <TextInput
+                style={styles.input}
+                placeholder="Password"
+                secureTextEntry={true}
+                value={password}
+                onChangeText={setPassword}
+              />
+            </View>
+            <View style={styles.inputContainer}>
+              <Ionicons name="lock-closed-outline" size={24} color="#999" style={styles.inputIcon} />
+              <TextInput
+                style={styles.input}
+                placeholder="Confirm Password"
+                secureTextEntry={true}
+                value={confirmPassword}
+                onChangeText={setConfirmPassword}
+              />
+            </View>
+            <View style={styles.inputContainer}>
+              <Ionicons name="transgender-outline" size={24} color="#999" style={styles.inputIcon} />
+              <TextInput
+                style={styles.input}
+                placeholder="Gender"
+                value={gender}
+                onChangeText={setGender}
+              />
+            </View>
+            <View style={styles.inputContainer}>
+              <Ionicons name="calendar-outline" size={24} color="#999" style={styles.inputIcon} />
+              <TextInput
+                style={styles.input}
+                placeholder="Date of Birth (YYYY-MM-DD)"
+                value={dob}
+                onChangeText={setDob}
+              />
+            </View>
+            <TouchableOpacity style={styles.button} onPress={handleRegister}>
+              <Text style={styles.buttonText}>Create Account</Text>
+            </TouchableOpacity>
+          </View>
+          <View style={styles.loginContainer}>
+            <Text style={styles.loginText}>Already have an account? </Text>
+            <TouchableOpacity onPress={() => navigation.navigate('Login')}>
+              <Text style={styles.loginButton}>Login</Text>
+            </TouchableOpacity>
+          </View>
+        </SafeAreaView>
+      </ScrollView>
+    </KeyboardAvoidingView>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    padding: 16,
+    backgroundColor: '#f0f0f0',
   },
-  titleContainer: {
+  scrollView: {
+    flexGrow: 1,
+  },
+  safeArea: {
     flex: 1,
-    justifyContent: "center",
-    alignItems: "center",
+    padding: 20,
+  },
+  header: {
+    alignItems: 'center',
+    marginVertical: 30,
   },
   titleText: {
-    fontSize: 24,
+    fontSize: 28,
     fontWeight: "bold",
-    textAlign: "center",
-    marginBottom: 10,
+    color: '#333',
+    marginTop: 10,
   },
   formContainer: {
-    flex: 2,
+    flex: 1,
     justifyContent: "center",
-    alignItems: "center",
-    paddingBottom: 20,
+  },
+  inputContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#fff',
+    borderRadius: 25,
+    paddingHorizontal: 15,
+    marginBottom: 15,
+    elevation: 2,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.2,
+    shadowRadius: 2,
+  },
+  inputIcon: {
+    marginRight: 10,
   },
   input: {
-    width: "100%",
-    height: 40,
-    borderColor: "#ccc",
-    borderWidth: 1,
-    borderRadius: 20,
-    paddingHorizontal: 10,
-    marginBottom: 15,
+    flex: 1,
+    height: 50,
+    color: '#333',
   },
   button: {
-    width: 200,
-    height: 40,
     backgroundColor: "#50C2C9",
-    borderRadius: 15,
+    borderRadius: 25,
+    height: 50,
     alignItems: "center",
     justifyContent: "center",
     marginTop: 20,
+    elevation: 3,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.25,
+    shadowRadius: 3.84,
   },
   buttonText: {
     color: "white",
-    fontSize: 14,
+    fontSize: 18,
+    fontWeight: "bold",
   },
   loginContainer: {
     flexDirection: 'row',
-    marginTop: 20,
     justifyContent: "center",
+    marginTop: 20,
   },
   loginText: {
-    fontSize: 14,
+    fontSize: 16,
+    color: '#333',
   },
   loginButton: {
-    fontSize: 14,
+    fontSize: 16,
     color: "#50C2C9",
     fontWeight: "bold",
   },

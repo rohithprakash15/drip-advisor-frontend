@@ -1,9 +1,10 @@
 import React, { useState, useEffect } from 'react';
-import { View, Button, Image, StyleSheet, Alert, Platform } from 'react-native';
+import { View, Text, TouchableOpacity, StyleSheet, SafeAreaView, Image, Alert, ScrollView, Platform, StatusBar } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
 import axios from 'axios';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as FileSystem from 'expo-file-system';
+import { Ionicons } from '@expo/vector-icons';
 
 const UploadImageScreen = () => {
   const [imageUri, setImageUri] = useState(null);
@@ -68,42 +69,35 @@ const UploadImageScreen = () => {
       return;
     }
 
-    console.log('Uploading image as file');
-
     const formData = new FormData();
     const fileName = imageUri.split('/').pop();
-    const fileType = `image/${fileName.split('.').pop()}`;
+    const fileType = 'image/jpeg'; // Assuming JPEG format, adjust if needed
 
-    // Adjust the URI to remove "file://" for iOS
-    const adjustedUri = Platform.OS === 'ios' ? imageUri.replace('file://', '') : imageUri;
-
-    const imageDetails = {
-      uri: adjustedUri,
-      name: fileName,
+    // Append the file
+    formData.append('image', {
+      uri: Platform.OS === 'ios' ? imageUri.replace('file://', '') : imageUri,
       type: fileType,
-    };
+      name: fileName,
+    });
 
-    formData.append('image', imageDetails);
-
-    // Add the 'path' field required by the backend
-    const path = adjustedUri;  // Assuming you want to send the full image path
-    formData.append('path', path);
+    // Append other necessary fields
+    formData.append('path', imageUri);
 
     try {
       const response = await axios.post(
-        'https://drip-advisor-backend.vercel.app/add_clothing_item', // Backend URL
+        'https://drip-advisor-backend.vercel.app/add_clothing_item',
         formData,
         {
           headers: {
-            'Authorization': `Bearer ${accessToken}`, // Use access token for authentication
+            'Authorization': `Bearer ${accessToken}`,
             'Content-Type': 'multipart/form-data',
+            'Accept': 'application/json',
           },
         }
       );
 
-      console.log('Upload Response:', response.data); // Log response from server
-      Alert.alert('Image uploaded successfully!', response.data.message);
-      // Optionally, reset the image URI after successful upload
+      console.log('Upload Response:', response.data);
+      Alert.alert('Success', 'Image uploaded successfully!');
       setImageUri(null);
     } catch (error) {
       console.error('Error uploading image:', error.response ? error.response.data : error.message);
@@ -113,14 +107,50 @@ const UploadImageScreen = () => {
 
   return (
     <View style={styles.container}>
-    
-      <Button title="Take Photo" onPress={takePhoto} />
-      {imageUri && (
-        <Image source={{ uri: imageUri }} style={styles.image} />
-      )}
-      {imageUri && (
-        <Button title="Upload Photo" onPress={uploadImage} />
-      )}
+      <ScrollView contentContainerStyle={styles.scrollContent}>
+        <View style={styles.header}>
+          <Ionicons name="cloud-upload-outline" size={80} color="#50C2C9" />
+          <Text style={styles.headerText}>Add to Your Wardrobe</Text>
+        </View>
+
+        <Text style={styles.descriptionText}>
+          Capture or select images of your clothing items to expand your digital wardrobe. 
+          This helps us provide better outfit recommendations tailored to your style! Don't worry! These images are not shared with anyone. They are stored securely on your device.
+        </Text>
+
+        <View style={styles.buttonContainer}>
+          <TouchableOpacity style={styles.button} onPress={takePhoto}>
+            <Ionicons name="camera-outline" size={24} color="#fff" />
+            <Text style={styles.buttonText}>Take Photo</Text>
+          </TouchableOpacity>
+          <TouchableOpacity style={styles.button} onPress={selectImage}>
+            <Ionicons name="images-outline" size={24} color="#fff" />
+            <Text style={styles.buttonText}>Select Image</Text>
+          </TouchableOpacity>
+        </View>
+        
+        {imageUri ? (
+          <View style={styles.previewContainer}>
+            <Image source={{ uri: imageUri }} style={styles.previewImage} />
+            <TouchableOpacity style={styles.uploadButton} onPress={uploadImage}>
+              <Text style={styles.uploadButtonText}>Upload to Wardrobe</Text>
+            </TouchableOpacity>
+          </View>
+        ) : (
+          <View style={styles.placeholderContainer}>
+            <Ionicons name="shirt-outline" size={100} color="#ccc" />
+            <Text style={styles.placeholderText}>No image selected</Text>
+          </View>
+        )}
+
+        <View style={styles.tipsContainer}>
+          <Text style={styles.tipsHeader}>Tips for Great Wardrobe Photos:</Text>
+          <Text style={styles.tipText}>• Use good lighting for accurate colors</Text>
+          <Text style={styles.tipText}>• Capture items against a plain background</Text>
+          <Text style={styles.tipText}>• Include the full item in the frame</Text>
+          <Text style={styles.tipText}>• Take photos of individual items separately</Text>
+        </View>
+      </ScrollView>
     </View>
   );
 };
@@ -128,15 +158,99 @@ const UploadImageScreen = () => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
+    backgroundColor: '#f0f0f0',
+    paddingTop: Platform.OS === 'android' ? StatusBar.currentHeight : 0,
+  },
+  scrollContent: {
+    flexGrow: 1,
     padding: 20,
   },
-  image: {
-    marginTop: 20,
-    width: 200,
-    height: 200,
+  header: {
+    alignItems: 'center',
+    marginBottom: 20,
+  },
+  headerText: {
+    fontSize: 24,
+    fontWeight: 'bold',
+    color: '#333',
+    marginTop: 10,
+  },
+  descriptionText: {
+    fontSize: 16,
+    color: '#666',
+    textAlign: 'center',
+    marginBottom: 20,
+  },
+  buttonContainer: {
+    flexDirection: 'row',
+    justifyContent: 'space-around',
+    marginBottom: 20,
+  },
+  button: {
+    backgroundColor: '#50C2C9',
+    padding: 15,
     borderRadius: 10,
+    alignItems: 'center',
+    width: '45%',
+  },
+  buttonText: {
+    color: '#fff',
+    fontWeight: 'bold',
+    marginTop: 5,
+  },
+  previewContainer: {
+    alignItems: 'center',
+    marginTop: 20,
+  },
+  previewImage: {
+    width: 250,
+    height: 250,
+    borderRadius: 10,
+    marginBottom: 20,
+  },
+  uploadButton: {
+    backgroundColor: '#50C2C9',
+    padding: 15,
+    borderRadius: 10,
+    alignItems: 'center',
+    width: '100%',
+  },
+  uploadButtonText: {
+    color: '#fff',
+    fontSize: 18,
+    fontWeight: 'bold',
+  },
+  placeholderContainer: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    height: 250,
+    borderWidth: 2,
+    borderColor: '#ccc',
+    borderStyle: 'dashed',
+    borderRadius: 10,
+    marginTop: 20,
+  },
+  placeholderText: {
+    color: '#999',
+    fontSize: 16,
+    marginTop: 10,
+  },
+  tipsContainer: {
+    marginTop: 30,
+    backgroundColor: '#fff',
+    padding: 15,
+    borderRadius: 10,
+  },
+  tipsHeader: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    marginBottom: 10,
+    color: '#333',
+  },
+  tipText: {
+    fontSize: 14,
+    color: '#666',
+    marginBottom: 5,
   },
 });
 

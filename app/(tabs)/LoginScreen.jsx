@@ -1,7 +1,8 @@
 import React, { useState } from 'react';
-import { View, Text, TextInput, TouchableOpacity, StyleSheet, SafeAreaView, Image, Alert } from 'react-native';
+import { View, Text, TextInput, TouchableOpacity, StyleSheet, SafeAreaView, Alert, KeyboardAvoidingView, Platform } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage'; 
 import { useNavigation } from '@react-navigation/native';
+import { Ionicons } from '@expo/vector-icons';
 
 const LoginScreen = () => {
   const navigation = useNavigation(); 
@@ -42,108 +43,127 @@ const LoginScreen = () => {
   };
 
   return (
-    <SafeAreaView style={styles.container}>
-      <View style={styles.header}>
-        <Text style={styles.welcomeText}>Welcome Back!</Text>
-      </View>
-      
-      <View style={styles.illustrationContainer}>
-        <Image 
-          source={require('./../../media/LoginImage.png')} 
-          style={styles.illustration}
-        />
-      </View>
-      
-      <View style={styles.inputContainer}>
-        <TextInput
-          style={styles.input}
-          placeholder="Enter your email"
-          placeholderTextColor="#999"
-          value={email}
-          onChangeText={setEmail}
-        />
-        <TextInput
-          style={styles.input}
-          placeholder="Enter password"
-          placeholderTextColor="#999"
-          secureTextEntry
-          value={password}
-          onChangeText={setPassword}
-        />
-        <TouchableOpacity>
-          <Text style={styles.forgotPassword}>Forgot Password?</Text>
-        </TouchableOpacity>
-      </View>
+    <KeyboardAvoidingView 
+      behavior={Platform.OS === "ios" ? "padding" : "height"}
+      style={styles.container}
+    >
+      <SafeAreaView style={styles.safeArea}>
+        <View style={styles.header}>
+          <Ionicons name="person-circle-outline" size={100} color="#50C2C9" />
+          <Text style={styles.welcomeText}>Welcome Back!</Text>
+        </View>
+        
+        <View style={styles.formContainer}>
+          <View style={styles.inputContainer}>
+            <Ionicons name="mail-outline" size={24} color="#999" style={styles.inputIcon} />
+            <TextInput
+              style={styles.input}
+              placeholder="Email Address"
+              placeholderTextColor="#999"
+              value={email}
+              onChangeText={setEmail}
+              keyboardType="email-address"
+              autoCapitalize="none"
+            />
+          </View>
+          <View style={styles.inputContainer}>
+            <Ionicons name="lock-closed-outline" size={24} color="#999" style={styles.inputIcon} />
+            <TextInput
+              style={styles.input}
+              placeholder="Password"
+              placeholderTextColor="#999"
+              secureTextEntry
+              value={password}
+              onChangeText={setPassword}
+            />
+          </View>
+          <TouchableOpacity style={styles.forgotPasswordContainer}>
+            <Text style={styles.forgotPassword}>Forgot Password?</Text>
+          </TouchableOpacity>
+        </View>
 
-      <View style={styles.signInContainer}>
         <TouchableOpacity style={styles.signInButton} onPress={handleLogin}>
           <Text style={styles.signInText}>Sign In</Text>
         </TouchableOpacity>
-      </View>
 
-      <View style={styles.signUpContainer}>
-        <Text style={styles.signUpText}>Don't have an account? </Text>
-        <TouchableOpacity onPress={() => navigation.navigate('Register')}>
-          <Text style={styles.signUpLink}>Sign Up</Text>
-        </TouchableOpacity>
-      </View>
-    </SafeAreaView>
+        <View style={styles.signUpContainer}>
+          <Text style={styles.signUpText}>Don't have an account? </Text>
+          <TouchableOpacity onPress={() => navigation.navigate('Register')}>
+            <Text style={styles.signUpLink}>Sign Up</Text>
+          </TouchableOpacity>
+        </View>
+      </SafeAreaView>
+    </KeyboardAvoidingView>
   );
 };
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    padding: 16,
+    backgroundColor: '#f0f0f0',
+  },
+  safeArea: {
+    flex: 1,
+    padding: 20,
+    justifyContent: 'center',
   },
   header: {
-    marginTop: 20,
     alignItems: 'center',
+    marginBottom: 40,
   },
   welcomeText: {
-    fontSize: 24,
+    fontSize: 28,
     fontWeight: 'bold',
     color: '#333',
+    marginTop: 10,
   },
-  illustrationContainer: {
-    alignItems: 'center',
-    marginVertical: 30,
-  },
-  illustration: {
-    width: 200,
-    height: 200,
+  formContainer: {
+    marginBottom: 30,
   },
   inputContainer: {
-    marginVertical: 10,
-  },
-  input: {
-    width: '100%',
-    height: 50,
-    borderColor: '#ccc',
-    borderWidth: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#fff',
     borderRadius: 25,
     paddingHorizontal: 15,
     marginBottom: 15,
+    elevation: 2,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.2,
+    shadowRadius: 2,
+  },
+  inputIcon: {
+    marginRight: 10,
+  },
+  input: {
+    flex: 1,
+    height: 50,
+    color: '#333',
+  },
+  forgotPasswordContainer: {
+    alignItems: 'flex-end',
   },
   forgotPassword: {
-    color: '#007BFF',
-    marginBottom: 20,
-    textAlign: 'right',
-  },
-  signInContainer: {
-    alignItems: 'center',
+    color: '#50C2C9',
+    fontSize: 14,
   },
   signInButton: {
-    width: '100%',
-    height: 50,
     backgroundColor: '#50C2C9',
     borderRadius: 25,
+    height: 50,
     justifyContent: 'center',
     alignItems: 'center',
+    elevation: 3,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.25,
+    shadowRadius: 3.84,
   },
   signInText: {
     color: '#fff',
     fontSize: 18,
+    fontWeight: 'bold',
   },
   signUpContainer: {
     flexDirection: 'row',
@@ -151,10 +171,11 @@ const styles = StyleSheet.create({
     marginTop: 20,
   },
   signUpText: {
-    fontSize: 14,
+    fontSize: 16,
+    color: '#333',
   },
   signUpLink: {
-    fontSize: 14,
+    fontSize: 16,
     color: '#50C2C9',
     fontWeight: 'bold',
   },

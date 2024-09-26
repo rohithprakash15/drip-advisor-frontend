@@ -8,16 +8,16 @@ import {
   TextInput, 
   KeyboardAvoidingView, 
   Platform, 
+  StatusBar,
   ScrollView,
   TouchableOpacity,
-  ActivityIndicator,
-  StatusBar
+  ActivityIndicator
 } from 'react-native';
 import axios from 'axios';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Ionicons } from '@expo/vector-icons';
 
-const GeneratedOutfitsScreen = ({ route }) => {
+const DailySuggestionScreen = () => {
   const [outfits, setOutfits] = useState([]);
   const [loading, setLoading] = useState(false);
   const [accessToken, setAccessToken] = useState(null);
@@ -26,7 +26,6 @@ const GeneratedOutfitsScreen = ({ route }) => {
   const [weatherDescription, setWeatherDescription] = useState('sunny with moderate humidity');
   const [temperature, setTemperature] = useState('33');
   const [dayDescription, setDayDescription] = useState('');
-  const { selectedItems } = route.params;
 
   useEffect(() => {
     const getToken = async () => {
@@ -52,36 +51,22 @@ const GeneratedOutfitsScreen = ({ route }) => {
 
     setLoading(true);
     try {
-      const token = await AsyncStorage.getItem('access_token');
-      if (!token) {
-        Alert.alert('Error', 'No access token found.');
-        setLoading(false);
-        return;
-      }
-
-      const requestData = {
-        weather_description: weatherDescription,
-        temperature: parseFloat(temperature),
-        day_description: dayDescription || undefined, // Day description is already optional
-        base_items_ids: selectedItems,
-      };
-
-      console.log('Request Payload:', requestData);
-
       const response = await axios.post(
-        `${baseUrl}outfits/build`,
-        requestData,
+        `${baseUrl}outfits/generate`,
+        {
+          weather_description: weatherDescription,
+          temperature: parseFloat(temperature),
+          day_description: dayDescription || undefined // Make day_description optional
+        },
         {
           headers: {
-            Authorization: `Bearer ${token}`,
-          },
+            'Authorization': `Bearer ${accessToken}`,
+            'Content-Type': 'application/json'
+          }
         }
       );
 
-      console.log('API Response:', response.data);
-      // Filter out outfits with only one clothing item
-      const filteredOutfits = response.data.filter(outfit => outfit.clothing_items_list.length > 1);
-      setOutfits(filteredOutfits);
+      setOutfits(response.data);
     } catch (error) {
       console.error('Error generating outfits:', error.response ? error.response.data : error.message);
       Alert.alert('Error', 'Unable to generate outfits. Please try again.');
@@ -90,37 +75,31 @@ const GeneratedOutfitsScreen = ({ route }) => {
     }
   };
 
-  const markOutfitAsUsed = async (outfitId) => {
+  const useOutfit = async (outfitId) => {
     try {
-      const token = await AsyncStorage.getItem('access_token');
-      if (!token) {
-        Alert.alert('Error', 'No access token found.');
-        return;
-      }
-
       const response = await axios.post(
         `${baseUrl}outfits/use/${outfitId}`,
         {},
         {
           headers: {
-            Authorization: `Bearer ${token}`,
-          },
+            'Authorization': `Bearer ${accessToken}`,
+          }
         }
       );
 
-      Alert.alert('Success', response.data.message || 'Outfit marked as used!');
-      // Refresh the outfits list or update the local state to reflect the change
+      Alert.alert('Success', 'Outfit used successfully! Items are now unavailable for 48 hours.');
+      // Update the local state to reflect the change
       setOutfits(outfits.map(outfit => 
         outfit._id === outfitId ? { ...outfit, isUsed: true } : outfit
       ));
     } catch (error) {
-      console.error('Error marking outfit as used:', error.response ? error.response.data : error.message);
-      Alert.alert('Error', 'Unable to mark outfit as used. Please try again.');
+      console.error('Error using outfit:', error.response ? error.response.data : error.message);
+      Alert.alert('Error', 'Unable to use outfit. Please try again.');
     }
   };
 
-  const renderOutfit = ({ item }) => (
-    <View style={styles.outfitContainer}>
+  const renderOutfit = (item) => (
+    <View key={item._id} style={styles.outfitContainer}>
       <Text style={styles.outfitName}>{item.name}</Text>
       <Text style={styles.outfitDescription}>{item.description}</Text>
       <Text style={styles.stylingTips}>{item.styling_tips}</Text>
@@ -134,7 +113,7 @@ const GeneratedOutfitsScreen = ({ route }) => {
       </ScrollView>
       
       <TouchableOpacity 
-        onPress={() => markOutfitAsUsed(item._id)} 
+        onPress={() => useOutfit(item._id)} 
         style={[styles.useButton, item.isUsed && styles.usedButton]}
         disabled={item.isUsed}
       >
@@ -146,53 +125,55 @@ const GeneratedOutfitsScreen = ({ route }) => {
   );
 
   return (
-    <KeyboardAvoidingView
-      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-      style={styles.container}
-    >
-      <Text style={styles.pageTitle}>Daily Suggestions</Text>
-      <ScrollView contentContainerStyle={styles.scrollContent}>
-        <View style={styles.inputContainer}>
-          <Ionicons name="cloudy-outline" size={24} color="#666" style={styles.inputIcon} />
-          <TextInput
-            placeholder="Weather Description"
-            value={weatherDescription}
-            onChangeText={setWeatherDescription}
-            style={styles.input}
-          />
-        </View>
-        <View style={styles.inputContainer}>
-          <Ionicons name="thermometer-outline" size={24} color="#666" style={styles.inputIcon} />
-          <TextInput
-            placeholder="Temperature (°C)"
-            value={temperature}
-            onChangeText={setTemperature}
-            keyboardType="numeric"
-            style={styles.input}
-          />
-        </View>
-        <View style={styles.inputContainer}>
-          <Ionicons name="calendar-outline" size={24} color="#666" style={styles.inputIcon} />
-          <TextInput
-            placeholder="Describe your day (Optional)"
-            value={dayDescription}
-            onChangeText={setDayDescription}
-            style={styles.input}
-          />
-        </View>
-        <TouchableOpacity style={styles.generateButton} onPress={generateOutfits} disabled={loading}>
-          <Text style={styles.generateButtonText}>Generate Outfits</Text>
-        </TouchableOpacity>
-        
-        {loading ? (
-          <ActivityIndicator size="large" color="#50C2C9" style={styles.loader} />
-        ) : (
-          <View style={styles.outfitsContainer}>
-            {outfits.map((item) => renderOutfit({ item }))}
+    <View style={styles.container}>
+      <KeyboardAvoidingView
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        style={styles.keyboardAvoidingView}
+      >
+        <Text style={styles.pageTitle}>Daily Suggestions</Text>
+        <ScrollView contentContainerStyle={styles.scrollContent}>
+          <View style={styles.inputContainer}>
+            <Ionicons name="cloudy-outline" size={24} color="#666" style={styles.inputIcon} />
+            <TextInput
+              placeholder="Weather Description"
+              value={weatherDescription}
+              onChangeText={setWeatherDescription}
+              style={styles.input}
+            />
           </View>
-        )}
-      </ScrollView>
-    </KeyboardAvoidingView>
+          <View style={styles.inputContainer}>
+            <Ionicons name="thermometer-outline" size={24} color="#666" style={styles.inputIcon} />
+            <TextInput
+              placeholder="Temperature (°C)"
+              value={temperature}
+              onChangeText={setTemperature}
+              keyboardType="numeric"
+              style={styles.input}
+            />
+          </View>
+          <View style={styles.inputContainer}>
+            <Ionicons name="calendar-outline" size={24} color="#666" style={styles.inputIcon} />
+            <TextInput
+              placeholder="Describe your day (Optional)"
+              value={dayDescription}
+              onChangeText={setDayDescription}
+              style={styles.input}
+            />
+          </View>
+          <TouchableOpacity style={styles.generateButton} onPress={generateOutfits} disabled={loading}>
+            <Text style={styles.generateButtonText}>Generate Outfits</Text>
+          </TouchableOpacity>
+          
+          {loading ? (
+            <ActivityIndicator size="large" color="#50C2C9" style={styles.loader} />
+          ) : (
+            <View style={styles.outfitsContainer}>
+              {outfits.map(renderOutfit)}
+            </View>
+          )}
+        </ScrollView>
+      </KeyboardAvoidingView>
+    </View>
   );
 };
 
@@ -200,8 +181,15 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#f0f0f0',
+    paddingTop: Platform.OS === 'android' ? StatusBar.currentHeight : 10,
   },
+  keyboardAvoidingView: {
+    flex: 1,
+  },
+  
+  
   scrollContent: {
+    flexGrow: 1,
     padding: 16,
   },
   inputContainer: {
@@ -219,14 +207,6 @@ const styles = StyleSheet.create({
     flex: 1,
     height: 50,
     fontSize: 16,
-  },
-  pageTitle: {
-    fontSize: 28,
-    fontWeight: 'bold',
-    color: '#333',
-    textAlign: 'center',
-    marginVertical: 20,
-    paddingHorizontal: 16,
   },
   generateButton: {
     backgroundColor: '#50C2C9',
@@ -297,6 +277,14 @@ const styles = StyleSheet.create({
     color: '#fff',
     fontWeight: 'bold',
   },
+  pageTitle: {
+    fontSize: 28,
+    fontWeight: 'bold',
+    color: '#333',
+    textAlign: 'center',
+    marginVertical: 20,
+    paddingHorizontal: 16,
+  },
 });
 
-export default GeneratedOutfitsScreen;
+export default DailySuggestionScreen;
