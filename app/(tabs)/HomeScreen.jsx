@@ -50,6 +50,11 @@ function HomeScreen() {
         style={{ marginTop: 10 }}
       />
       <Button
+      title="WardrobeScreen"  // New button for UserSuggestion screen
+      onPress={() => navigation.navigate('WardrobeScreen')}  // Navigate to UserSuggestion screen
+      style={{ marginTop: 10 }}
+    />
+      <Button
         title="Logout"
         onPress={handleLogout}  // Call the logout function
         style={{ marginTop: 10 }}

@@ -3,6 +3,7 @@ import { View, Button, Image, StyleSheet, Alert, Platform } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
 import axios from 'axios';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import * as FileSystem from 'expo-file-system';
 
 const UploadImageScreen = () => {
   const [imageUri, setImageUri] = useState(null);
@@ -33,7 +34,7 @@ const UploadImageScreen = () => {
     }
   };
 
-  // Function to take a photo using the camera
+  // Function to take a photo using the camera and save it to a specific folder
   const takePhoto = async () => {
     const permissionResult = await ImagePicker.requestCameraPermissionsAsync();
     if (permissionResult.granted === false) {
@@ -44,8 +45,14 @@ const UploadImageScreen = () => {
     const result = await ImagePicker.launchCameraAsync();
     if (!result.canceled) {
       const uri = result.assets[0].uri;
-      setImageUri(uri);
-      console.log('Captured Photo URI:', uri);
+      // Move the file to a specific folder on the device
+      const newPath = `${FileSystem.documentDirectory}photos/${Date.now()}.jpg`;
+      await FileSystem.moveAsync({
+        from: uri,
+        to: newPath,
+      });
+      setImageUri(newPath);
+      console.log('Saved Photo Path:', newPath);
     }
   };
 
@@ -76,12 +83,11 @@ const UploadImageScreen = () => {
       type: fileType,
     };
 
-    console.log('Image Details:', imageDetails); // Log image details
-
     formData.append('image', imageDetails);
 
-    // Add the "path" field that the server expects
-    formData.append('path', fileName); // You can customize this value
+    // Add the 'path' field required by the backend
+    const path = adjustedUri;  // Assuming you want to send the full image path
+    formData.append('path', path);
 
     try {
       const response = await axios.post(
@@ -98,7 +104,7 @@ const UploadImageScreen = () => {
       console.log('Upload Response:', response.data); // Log response from server
       Alert.alert('Image uploaded successfully!', response.data.message);
       // Optionally, reset the image URI after successful upload
-      setImageUri(null); 
+      setImageUri(null);
     } catch (error) {
       console.error('Error uploading image:', error.response ? error.response.data : error.message);
       Alert.alert('Upload failed', 'Unable to upload image. Please try again.');

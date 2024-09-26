@@ -9,6 +9,7 @@ import Uploader from './UploadImageScreen';  // Ensure the correct path
 import Profile from './Profile';
 import Gemini from './Gemini';
 import UserSuggestion from "./UserSuggestion";
+import WardrobeScreen from './WardrobeScreen';
 const Stack = createStackNavigator();
 
 export default function App() {
@@ -40,6 +41,7 @@ export default function App() {
         <Stack.Screen name="Profile" component={Profile} options={{ title: 'Profile' }} />
         <Stack.Screen name="UserSuggestion" component={UserSuggestion} options={{ title: 'UserSuggestion' }} />
         <Stack.Screen name="Gemini" component={Gemini} options={{ title: 'Gemini' }} />
+        <Stack.Screen name="WardrobeScreen" component={WardrobeScreen} options={{ title: 'WardrobeScreen' }} />
   
       </Stack.Navigator>
     </NavigationContainer>
