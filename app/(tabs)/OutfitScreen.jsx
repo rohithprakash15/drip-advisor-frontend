@@ -7,18 +7,18 @@ import {
   Image, 
   TextInput, 
   TouchableOpacity, 
-  Alert,
-  ScrollView
+  Alert
 } from 'react-native';
 import axios from 'axios';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
-const OutfitSuggestionScreen = () => {
+const OutfitScreen = () => {
   const [outfits, setOutfits] = useState([]);
   const [weatherDescription, setWeatherDescription] = useState('');
   const [temperature, setTemperature] = useState('');
   const [dayDescription, setDayDescription] = useState('');
   const [accessToken, setAccessToken] = useState(null);
+  const baseUrl = 'https://drip-advisor-backend.vercel.app/';
 
   useEffect(() => {
     const getToken = async () => {
@@ -39,9 +39,16 @@ const OutfitSuggestionScreen = () => {
       return;
     }
 
+    console.log("Generating outfits with the following data:");
+    console.log({
+      weather_description: weatherDescription,
+      temperature: parseFloat(temperature),
+      day_description: dayDescription,
+    });
+
     try {
       const response = await axios.post(
-        'https://drip-advisor-backend.vercel.app/outfits/generate',
+        `${baseUrl}outfits/generate`,
         {
           weather_description: weatherDescription,
           temperature: parseFloat(temperature),
@@ -55,15 +62,26 @@ const OutfitSuggestionScreen = () => {
         }
       );
       setOutfits(response.data);
+      console.log("Outfits generated successfully:", response.data);
+      
     } catch (error) {
       console.error('Error generating outfits:', error.response ? error.response.data : error.message);
       Alert.alert('Error', 'Unable to generate outfits. Please try again.');
     }
   };
 
+  const getImageUri = (item) => {
+    // Check if the path is a local file URI or a server-stored image
+    if (item.path && item.path.startsWith('file://')) {
+      return item.path; // Local file URI
+    } else {
+      return `${baseUrl}${item.image}`; // Server-stored image
+    }
+  };
+
   const renderClothingItem = ({ item }) => (
     <View style={styles.clothingItemContainer}>
-      <Image source={{ uri: item.path }} style={styles.clothingImage} />
+      <Image source={{ uri: getImageUri(item) }} style={styles.clothingImage} />
       <Text style={styles.clothingText}>{item.description}</Text>
     </View>
   );
@@ -86,50 +104,49 @@ const OutfitSuggestionScreen = () => {
     </View>
   );
 
+  // FlatList with header components for inputs
   return (
-    <ScrollView style={styles.container}>
-      <Text style={styles.header}>Outfit Suggestions</Text>
-      
-      <TextInput
-        style={styles.input}
-        placeholder="Weather Description"
-        value={weatherDescription}
-        onChangeText={setWeatherDescription}
-      />
-      <TextInput
-        style={styles.input}
-        placeholder="Temperature (°C)"
-        value={temperature}
-        onChangeText={setTemperature}
-        keyboardType="numeric"
-      />
-      <TextInput
-        style={styles.input}
-        placeholder="Day Description (optional)"
-        value={dayDescription}
-        onChangeText={setDayDescription}
-      />
-      
-      <TouchableOpacity style={styles.button} onPress={generateOutfits}>
-        <Text style={styles.buttonText}>Generate Outfits</Text>
-      </TouchableOpacity>
-
-      {outfits.length > 0 ? (
-        <FlatList
-          data={outfits}
-          keyExtractor={(item) => item._id}
-          renderItem={renderOutfit}
-        />
-      ) : (
-        <Text style={styles.noOutfitsText}>No outfits generated yet</Text>
-      )}
-    </ScrollView>
+    <FlatList
+      ListHeaderComponent={
+        <>
+          <Text style={styles.header}>Outfit Suggestions</Text>
+          
+          <TextInput
+            style={styles.input}
+            placeholder="Weather Description"
+            value={weatherDescription}
+            onChangeText={setWeatherDescription}
+          />
+          <TextInput
+            style={styles.input}
+            placeholder="Temperature (°C)"
+            value={temperature}
+            onChangeText={setTemperature}
+            keyboardType="numeric"
+          />
+          <TextInput
+            style={styles.input}
+            placeholder="Day Description (optional)"
+            value={dayDescription}
+            onChangeText={setDayDescription}
+          />
+          
+          <TouchableOpacity style={styles.button} onPress={generateOutfits}>
+            <Text style={styles.buttonText}>Generate Outfits</Text>
+          </TouchableOpacity>
+        </>
+      }
+      data={outfits}
+      keyExtractor={(item) => item._id}
+      renderItem={renderOutfit}
+      contentContainerStyle={styles.container}
+      ListEmptyComponent={<Text style={styles.noOutfitsText}>No outfits generated yet</Text>}
+    />
   );
 };
 
 const styles = StyleSheet.create({
   container: {
-    flex: 1,
     padding: 16,
     backgroundColor: '#fff',
   },
@@ -210,4 +227,4 @@ const styles = StyleSheet.create({
   },
 });
 
-export default OutfitSuggestionScreen;
+export default OutfitScreen;
