@@ -6,7 +6,6 @@ import { Ionicons } from '@expo/vector-icons';
 
 function HomeScreen() {
   const navigation = useNavigation();
-  const navigation = useNavigation();
   const [loading, setLoading] = useState(false);
 
   const handleLogout = async () => {
