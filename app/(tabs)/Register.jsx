@@ -4,6 +4,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { View, StyleSheet, Text, TextInput, TouchableOpacity, Alert, ScrollView, KeyboardAvoidingView, Platform } from "react-native";
 import { useNavigation } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
+import LoadingOverlay from '../../components/LoadingOverlay';
 
 function Register() {
   const navigation = useNavigation();
@@ -14,6 +15,8 @@ function Register() {
   const [name, setName] = useState("");         
   const [gender, setGender] = useState("");     
   const [dob, setDob] = useState("");           
+
+  const [loading, setLoading] = useState(false);
 
   const handleRegister = async () => {
     if (password !== confirmPassword) {
@@ -27,6 +30,7 @@ function Register() {
       return;
     }
 
+    setLoading(true);
     try {
       const response = await fetch(
         "https://drip-advisor-backend.vercel.app/users/signup",
@@ -58,6 +62,8 @@ function Register() {
     } catch (error) {
       console.error("Error during registration:", error);
       Alert.alert("Error", "Something went wrong. Please try again later.");
+    } finally {
+      setLoading(false);
     }
   };
   return (
@@ -151,6 +157,7 @@ function Register() {
           </View>
         </SafeAreaView>
       </ScrollView>
+      <LoadingOverlay isVisible={loading} message="Creating account..." />
     </KeyboardAvoidingView>
   );
 }

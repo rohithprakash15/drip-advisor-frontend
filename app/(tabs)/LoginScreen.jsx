@@ -3,11 +3,13 @@ import { View, Text, TextInput, TouchableOpacity, StyleSheet, SafeAreaView, Aler
 import AsyncStorage from '@react-native-async-storage/async-storage'; 
 import { useNavigation } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
+import LoadingOverlay from '../../components/LoadingOverlay';
 
 const LoginScreen = () => {
   const navigation = useNavigation(); 
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [loading, setLoading] = useState(false);
 
   const handleLogin = async () => {
     if (!email || !password) {
@@ -15,6 +17,7 @@ const LoginScreen = () => {
       return;
     }
 
+    setLoading(true);
     try {
       const response = await fetch('https://drip-advisor-backend.vercel.app/users/login', {
         method: 'POST',
@@ -39,6 +42,8 @@ const LoginScreen = () => {
       }
     } catch (error) {
       Alert.alert('Error', 'Network error. Please try again later.');
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -93,6 +98,7 @@ const LoginScreen = () => {
           </TouchableOpacity>
         </View>
       </SafeAreaView>
+      <LoadingOverlay isVisible={loading} message="Logging in..." />
     </KeyboardAvoidingView>
   );
 };

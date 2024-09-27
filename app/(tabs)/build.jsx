@@ -11,11 +11,46 @@ import {
   ScrollView,
   TouchableOpacity,
   ActivityIndicator,
-  StatusBar
+  StatusBar,
+  Animated
 } from 'react-native';
 import axios from 'axios';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Ionicons } from '@expo/vector-icons';
+
+const ShimmerPlaceholder = ({ width, height }) => {
+  const [fadeAnim] = useState(new Animated.Value(0.3));
+
+  useEffect(() => {
+    Animated.loop(
+      Animated.sequence([
+        Animated.timing(fadeAnim, {
+          toValue: 1,
+          duration: 1000,
+          useNativeDriver: true,
+        }),
+        Animated.timing(fadeAnim, {
+          toValue: 0.3,
+          duration: 1000,
+          useNativeDriver: true,
+        }),
+      ])
+    ).start();
+  }, [fadeAnim]);
+
+  return (
+    <Animated.View
+      style={[
+        styles.shimmer,
+        {
+          width,
+          height,
+          opacity: fadeAnim,
+        },
+      ]}
+    />
+  );
+};
 
 const GeneratedOutfitsScreen = ({ route }) => {
   const [outfits, setOutfits] = useState([]);
@@ -27,6 +62,8 @@ const GeneratedOutfitsScreen = ({ route }) => {
   const [temperature, setTemperature] = useState('33');
   const [dayDescription, setDayDescription] = useState('');
   const { selectedItems } = route.params;
+
+  const [outfitsGenerated, setOutfitsGenerated] = useState(false);
 
   useEffect(() => {
     const getToken = async () => {
@@ -51,6 +88,7 @@ const GeneratedOutfitsScreen = ({ route }) => {
     }
 
     setLoading(true);
+    setOutfitsGenerated(true);
     try {
       const token = await AsyncStorage.getItem('access_token');
       if (!token) {
@@ -121,27 +159,42 @@ const GeneratedOutfitsScreen = ({ route }) => {
 
   const renderOutfit = ({ item }) => (
     <View style={styles.outfitContainer}>
-      <Text style={styles.outfitName}>{item.name}</Text>
-      <Text style={styles.outfitDescription}>{item.description}</Text>
-      <Text style={styles.stylingTips}>{item.styling_tips}</Text>
+      {loading ? (
+        <ShimmerPlaceholder width={300} height={400} />
+      ) : (
+        <>
+          <Text style={styles.outfitName}>{item.name}</Text>
+          <Text style={styles.outfitDescription}>{item.description}</Text>
+          <Text style={styles.stylingTips}>{item.styling_tips}</Text>
 
-      <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.clothingItemsScroll}>
-        {item.clothing_items_list.map((clothingItem) => (
-          <View key={clothingItem._id} style={styles.clothingItemContainer}>
-            <Image source={{ uri: clothingItem.path }} style={styles.clothingImage} />
-          </View>
-        ))}
-      </ScrollView>
-      
-      <TouchableOpacity 
-        onPress={() => markOutfitAsUsed(item._id)} 
-        style={[styles.useButton, item.isUsed && styles.usedButton]}
-        disabled={item.isUsed}
-      >
-        <Text style={styles.useButtonText}>
-          {item.isUsed ? 'Outfit Used' : 'Use This Outfit'}
-        </Text>
-      </TouchableOpacity>
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.clothingItemsScroll}>
+            {item.clothing_items_list.map((clothingItem) => (
+              <View key={clothingItem._id} style={styles.clothingItemContainer}>
+                {loading ? (
+                  <ShimmerPlaceholder width={100} height={100} />
+                ) : (
+                  <Image 
+                    source={{ uri: clothingItem.path }} 
+                    style={styles.clothingImage}
+                    onLoad={() => console.log('Image loaded:', clothingItem.path)}
+                    onError={(error) => console.error('Image load error:', error)}
+                  />
+                )}
+              </View>
+            ))}
+          </ScrollView>
+          
+          <TouchableOpacity 
+            onPress={() => markOutfitAsUsed(item._id)} 
+            style={[styles.useButton, item.isUsed && styles.usedButton]}
+            disabled={item.isUsed}
+          >
+            <Text style={styles.useButtonText}>
+              {item.isUsed ? 'Outfit Used' : 'Use This Outfit'}
+            </Text>
+          </TouchableOpacity>
+        </>
+      )}
     </View>
   );
 
@@ -184,11 +237,17 @@ const GeneratedOutfitsScreen = ({ route }) => {
           <Text style={styles.generateButtonText}>Generate Outfits</Text>
         </TouchableOpacity>
         
-        {loading ? (
-          <ActivityIndicator size="large" color="#50C2C9" style={styles.loader} />
-        ) : (
+        {outfitsGenerated && (
           <View style={styles.outfitsContainer}>
-            {outfits.map((item) => renderOutfit({ item }))}
+            {[0, 1, 2].map((index) => (
+              <View key={index} style={styles.outfitContainer}>
+                {loading ? (
+                  <ShimmerPlaceholder width="100%" height={400} />
+                ) : (
+                  outfits[index] && renderOutfit({ item: outfits[index] })
+                )}
+              </View>
+            ))}
           </View>
         )}
       </ScrollView>
@@ -239,9 +298,6 @@ const styles = StyleSheet.create({
     color: '#fff',
     fontSize: 18,
     fontWeight: 'bold',
-  },
-  loader: {
-    marginTop: 20,
   },
   outfitsContainer: {
     marginTop: 20,
@@ -296,6 +352,10 @@ const styles = StyleSheet.create({
   useButtonText: {
     color: '#fff',
     fontWeight: 'bold',
+  },
+  shimmer: {
+    backgroundColor: '#E0E0E0',
+    borderRadius: 10,
   },
 });
 

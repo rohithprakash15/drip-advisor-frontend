@@ -5,10 +5,13 @@ import axios from 'axios';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as FileSystem from 'expo-file-system';
 import { Ionicons } from '@expo/vector-icons';
+import LoadingOverlay from '../../components/LoadingOverlay'; // Import the LoadingOverlay component
+import * as ImageManipulator from 'expo-image-manipulator';
 
 const UploadImageScreen = () => {
   const [imageUri, setImageUri] = useState(null);
   const [accessToken, setAccessToken] = useState(null);
+  const [loading, setLoading] = useState(false); // Add loading state
 
   // Fetch access token from AsyncStorage on component mount
   useEffect(() => {
@@ -43,17 +46,37 @@ const UploadImageScreen = () => {
       return;
     }
 
-    const result = await ImagePicker.launchCameraAsync();
-    if (!result.canceled) {
-      const uri = result.assets[0].uri;
-      // Move the file to a specific folder on the device
-      const newPath = `${FileSystem.documentDirectory}photos/${Date.now()}.jpg`;
-      await FileSystem.moveAsync({
-        from: uri,
-        to: newPath,
+    try {
+      const result = await ImagePicker.launchCameraAsync({
+        allowsEditing: true,
+        aspect: [4, 3],
+        quality: 0.5, // Reduced quality for faster processing
+        mediaTypes: ImagePicker.MediaTypeOptions.Images,
+        exif: false,
       });
-      setImageUri(newPath);
-      console.log('Saved Photo Path:', newPath);
+
+      console.log('Camera result:', result);
+
+      if (!result.canceled && result.assets && result.assets.length > 0) {
+        const uri = result.assets[0].uri;
+        console.log('Captured Photo URI:', uri);
+
+        // Compress and resize the image
+        const manipulatedImage = await ImageManipulator.manipulateAsync(
+          uri,
+          [{ resize: { width: 1000 } }], // Resize to max width of 1000px
+          { compress: 0.7, format: ImageManipulator.SaveFormat.JPEG }
+        );
+
+        console.log('Manipulated Image URI:', manipulatedImage.uri);
+
+        setImageUri(manipulatedImage.uri);
+      } else {
+        console.log('Camera capture cancelled or failed');
+      }
+    } catch (error) {
+      console.error('Error taking photo:', error);
+      Alert.alert('Error', 'Failed to capture photo. Please try again.');
     }
   };
 
@@ -83,6 +106,7 @@ const UploadImageScreen = () => {
     // Append other necessary fields
     formData.append('path', imageUri);
 
+    setLoading(true); // Start loading
     try {
       const response = await axios.post(
         'https://drip-advisor-backend.vercel.app/add_clothing_item',
@@ -93,6 +117,7 @@ const UploadImageScreen = () => {
             'Content-Type': 'multipart/form-data',
             'Accept': 'application/json',
           },
+          timeout: 30000, // Set a 30-second timeout
         }
       );
 
@@ -100,8 +125,14 @@ const UploadImageScreen = () => {
       Alert.alert('Success', 'Image uploaded successfully!');
       setImageUri(null);
     } catch (error) {
-      console.error('Error uploading image:', error.response ? error.response.data : error.message);
+      console.error('Error uploading image:', error);
+      if (error.response) {
+        console.error('Response data:', error.response.data);
+        console.error('Response status:', error.response.status);
+      }
       Alert.alert('Upload failed', 'Unable to upload image. Please try again.');
+    } finally {
+      setLoading(false); // Stop loading regardless of success or failure
     }
   };
 
@@ -151,6 +182,7 @@ const UploadImageScreen = () => {
           <Text style={styles.tipText}>• Take photos of individual items separately</Text>
         </View>
       </ScrollView>
+      <LoadingOverlay isVisible={loading} message="Uploading image..." />
     </View>
   );
 };

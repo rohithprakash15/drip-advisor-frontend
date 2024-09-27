@@ -62,8 +62,9 @@ const WardrobeScreen = () => {
   const baseUrl = 'https://drip-advisor-backend.vercel.app/';
   const navigation = useNavigation();
   const [filter, setFilter] = useState('all'); // New state for filter
-  const [frequencySort, setFrequencySort] = useState('desc');
+  const [frequencySort, setFrequencySort] = useState('asc'); // Changed default to 'asc'
   const [dateSort, setDateSort] = useState('desc');
+  const [imageLoadingStatus, setImageLoadingStatus] = useState({});
 
   // Fetch access token from AsyncStorage on component mount
   useEffect(() => {
@@ -95,7 +96,15 @@ const WardrobeScreen = () => {
               },
             }
           );
+          console.log('Fetched clothing items:', response.data);
           setClothingItems(response.data);
+          
+          // Initialize imageLoadingStatus for all items
+          const initialLoadingStatus = {};
+          response.data.forEach(item => {
+            initialLoadingStatus[item._id] = 'loading';
+          });
+          setImageLoadingStatus(initialLoadingStatus);
         } catch (error) {
           console.error('Error fetching clothing items:', error.response ? error.response.data : error.message);
           Alert.alert('Error', 'Unable to fetch clothing items. Please try again.');
@@ -228,10 +237,19 @@ const WardrobeScreen = () => {
   };
 
   const getImageUri = (item) => {
-    if (item.path && item.path.startsWith('file://')) {
+    if (item.path) {
+      // If the path is a full URL, use it directly
+      if (item.path.startsWith('http://') || item.path.startsWith('https://')) {
+        return item.path;
+      }
+      // If it's a relative path, return it as is (don't prepend baseUrl)
       return item.path;
+    } else if (item.image) {
+      // If there's an 'image' property, use it (don't prepend baseUrl)
+      return item.image;
     } else {
-      return `${baseUrl}${item.image}`;
+      console.error('No image path found for item:', item);
+      return 'https://via.placeholder.com/150'; // Fallback image
     }
   };
 
@@ -268,7 +286,7 @@ const WardrobeScreen = () => {
   const sortClothingItems = (items) => {
     return [...items].sort((a, b) => {
       let comparison = 0;
-      // Sort by frequency
+      // Sort by frequency (low to high by default)
       comparison = frequencySort === 'asc' 
         ? (a.frequency || 0) - (b.frequency || 0)
         : (b.frequency || 0) - (a.frequency || 0);
@@ -294,42 +312,58 @@ const WardrobeScreen = () => {
     </TouchableOpacity>
   );
 
-  const renderClothingItem = ({ item }) => (
-    <TouchableOpacity 
-      style={[
-        styles.itemContainer, 
-        selectedItems.includes(item._id) && styles.itemContainerSelected,
-        !item.available && styles.itemContainerUnavailable,
-        longPressSelectedItems.includes(item._id) && styles.itemContainerLongPressed
-      ]}
-      onPress={() => handleItemToggle(item._id, item.available)}
-      onLongPress={() => handleLongPress(item)}
-      delayLongPress={500}
-    >
-      <Image 
-        source={{ uri: getImageUri(item) }} 
-        style={[styles.image, !item.available && styles.imageUnavailable]} 
-      />
-      {(selectedItems.includes(item._id) || longPressSelectedItems.includes(item._id)) && (
-        <View style={[
-          styles.checkmarkContainer,
-          longPressSelectedItems.length > 0 && styles.longPressCheckmarkContainer
-        ]}>
-          <Ionicons name="checkmark-circle" size={24} color={longPressSelectedItems.length > 0 ? "#ff6347" : "#fff"} />
-        </View>
-      )}
-      {!item.available && (
-        <View style={styles.unavailableOverlay}>
-          <Text style={styles.unavailableText}>Unavailable</Text>
-        </View>
-      )}
-      {longPressSelectedItems.includes(item._id) && (
-        <View style={styles.longPressCheckmarkContainer}>
-          <Ionicons name="checkmark-circle" size={24} color="#ff6347" />
-        </View>
-      )}
-    </TouchableOpacity>
-  );
+  const renderClothingItem = ({ item }) => {
+    console.log('Rendering item:', item._id, 'Image status:', imageLoadingStatus[item._id]);
+    const imageUri = getImageUri(item);
+    console.log('Image URI:', imageUri);
+
+    return (
+      <TouchableOpacity 
+        style={[
+          styles.itemContainer, 
+          selectedItems.includes(item._id) && styles.itemContainerSelected,
+          !item.available && styles.itemContainerUnavailable,
+          longPressSelectedItems.includes(item._id) && styles.itemContainerLongPressed
+        ]}
+        onPress={() => handleItemToggle(item._id, item.available)}
+        onLongPress={() => handleLongPress(item)}
+        delayLongPress={500}
+      >
+        <Image 
+          source={{ uri: imageUri }} 
+          style={[
+            styles.image, 
+            !item.available && styles.imageUnavailable,
+          ]} 
+          onLoadStart={() => {
+            console.log('Image load started:', item._id);
+            setImageLoadingStatus(prev => ({ ...prev, [item._id]: 'loading' }));
+          }}
+          onLoad={() => {
+            console.log('Image loaded:', item._id);
+            setImageLoadingStatus(prev => ({ ...prev, [item._id]: 'loaded' }));
+          }}
+          onError={(error) => {
+            console.error('Image load error:', item._id, error.nativeEvent.error);
+            setImageLoadingStatus(prev => ({ ...prev, [item._id]: 'error' }));
+          }}
+        />
+        {(selectedItems.includes(item._id) || longPressSelectedItems.includes(item._id)) && (
+          <View style={[
+            styles.checkmarkContainer,
+            longPressSelectedItems.length > 0 && styles.longPressCheckmarkContainer
+          ]}>
+            <Ionicons name="checkmark-circle" size={24} color={longPressSelectedItems.length > 0 ? "#ff6347" : "#fff"} />
+          </View>
+        )}
+        {!item.available && (
+          <View style={styles.unavailableOverlay}>
+            <Text style={styles.unavailableText}>Unavailable</Text>
+          </View>
+        )}
+      </TouchableOpacity>
+    );
+  };
 
   return (
     <View style={styles.container}>
@@ -351,8 +385,8 @@ const WardrobeScreen = () => {
           <Dropdown
             label="Frequency:"
             options={[
-              { label: 'High to Low', value: 'desc' },
               { label: 'Low to High', value: 'asc' },
+              { label: 'High to Low', value: 'desc' },
             ]}
             selectedValue={frequencySort}
             onSelect={setFrequencySort}
@@ -441,6 +475,8 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
     shadowRadius: 4,
+    width: '47%', // Adjust this value as needed
+    height: undefined, // This will be determined by the aspectRatio
   },
   itemContainerSelected: {
     borderColor: '#50C2C9',
@@ -456,6 +492,7 @@ const styles = StyleSheet.create({
   image: {
     width: '100%',
     height: '100%',
+    borderRadius: 10,
   },
   imageUnavailable: {
     opacity: 0.5,
