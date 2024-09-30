@@ -14,9 +14,12 @@ import {
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Ionicons } from '@expo/vector-icons';
 import DateTimePicker from '@react-native-community/datetimepicker';
-import axios from 'axios'; // Make sure to import axios
+import axios from 'axios';
+import { handleTokenExpiration } from '../../app/tokenUtils';
+import { useNavigation } from '@react-navigation/native';
 
 const ProfileScreen = () => {
+  const navigation = useNavigation();
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [gender, setGender] = useState('');
@@ -50,14 +53,17 @@ const ProfileScreen = () => {
   const fetchUserProfile = async (token) => {
     setLoading(true);
     try {
-      const response = await fetch('https://drip-advisor-backend.vercel.app/users/profile', {
-        method: 'GET',
+      const response = await axios.get('https://drip-advisor-backend.vercel.app/users/profile', {
         headers: {
           Authorization: `Bearer ${token}`,
         },
       });
-      if (!response.ok) throw new Error('Failed to fetch user profile');
-      const data = await response.json();
+
+      if (response.status !== 200) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
+      const data = response.data;
       setName(data.name);
       setEmail(data.email);
       setGender(data.gender);
@@ -69,7 +75,27 @@ const ProfileScreen = () => {
       }
     } catch (error) {
       console.error('Error fetching user profile:', error);
-      Alert.alert('Error', error.message);
+      if (error.response) {
+        // The request was made and the server responded with a status code
+        // that falls out of the range of 2xx
+        console.error('Response data:', error.response.data);
+        console.error('Response status:', error.response.status);
+        console.error('Response headers:', error.response.headers);
+        
+        if (error.response.status === 401) {
+          handleTokenExpiration(navigation);
+        } else {
+          Alert.alert('Error', `Failed to fetch profile: ${error.response.data.message || 'Unknown error'}`);
+        }
+      } else if (error.request) {
+        // The request was made but no response was received
+        console.error('No response received:', error.request);
+        Alert.alert('Error', 'No response from server. Please check your internet connection.');
+      } else {
+        // Something happened in setting up the request that triggered an Error
+        console.error('Error setting up request:', error.message);
+        Alert.alert('Error', `An unexpected error occurred: ${error.message}`);
+      }
     } finally {
       setLoading(false);
     }
@@ -79,37 +105,37 @@ const ProfileScreen = () => {
     setLoading(true);
     try {
       // Update profile
-      const profileResponse = await fetch('https://drip-advisor-backend.vercel.app/users/profile', {
-        method: 'PUT',
+      const profileResponse = await axios.put('https://drip-advisor-backend.vercel.app/users/profile', {
+        name,
+        gender,
+        dob: dob.toISOString().split('T')[0],
+      }, {
         headers: {
           'Content-Type': 'application/json',
           Authorization: `Bearer ${accessToken}`,
         },
-        body: JSON.stringify({
-          name,
-          gender,
-          dob: dob.toISOString().split('T')[0],
-        }),
       });
-      if (!profileResponse.ok) throw new Error('Failed to update profile');
 
       // Update preferences
-      const preferencesResponse = await fetch('https://drip-advisor-backend.vercel.app/users/preferences', {
-        method: 'POST',
+      const preferencesResponse = await axios.post('https://drip-advisor-backend.vercel.app/users/preferences', {
+        preferences,
+      }, {
         headers: {
           'Content-Type': 'application/json',
           Authorization: `Bearer ${accessToken}`,
         },
-        body: JSON.stringify({ preferences }),
       });
-      if (!preferencesResponse.ok) throw new Error('Failed to update preferences');
 
-      const result = await profileResponse.json();
-      Alert.alert('Success', result.message || 'Profile and preferences updated successfully');
+      Alert.alert('Success', 'Profile and preferences updated successfully');
       setIsEditing(false);
       setNewPreference('');
     } catch (error) {
-      Alert.alert('Error', error.message);
+      console.error('Error updating profile:', error);
+      if (error.response && error.response.data.msg === "Token has expired") {
+        handleTokenExpiration(navigation);
+      } else {
+        Alert.alert('Error', error.message);
+      }
     } finally {
       setLoading(false);
     }

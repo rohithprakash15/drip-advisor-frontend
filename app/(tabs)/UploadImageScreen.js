@@ -7,14 +7,26 @@ import * as FileSystem from 'expo-file-system';
 import { Ionicons } from '@expo/vector-icons';
 import LoadingOverlay from '../../components/LoadingOverlay'; // Import the LoadingOverlay component
 import * as ImageManipulator from 'expo-image-manipulator';
+import { handleTokenExpiration } from '../../app/tokenUtils';
+import { useNavigation } from '@react-navigation/native';
 
 const UploadImageScreen = () => {
+  const navigation = useNavigation();
   const [imageUri, setImageUri] = useState(null);
   const [accessToken, setAccessToken] = useState(null);
   const [loading, setLoading] = useState(false); // Add loading state
 
+  const DRIP_ADVISOR_DIRECTORY = `${FileSystem.documentDirectory}drip-advisor/`;
+
   // Fetch access token from AsyncStorage on component mount
   useEffect(() => {
+    const setupDirectory = async () => {
+      const dirInfo = await FileSystem.getInfoAsync(DRIP_ADVISOR_DIRECTORY);
+      if (!dirInfo.exists) {
+        await FileSystem.makeDirectoryAsync(DRIP_ADVISOR_DIRECTORY, { intermediates: true });
+      }
+    };
+    setupDirectory();
     const getToken = async () => {
       const token = await AsyncStorage.getItem('access_token');
       setAccessToken(token);
@@ -40,17 +52,17 @@ const UploadImageScreen = () => {
 
   // Function to take a photo using the camera and save it to a specific folder
   const takePhoto = async () => {
-    const permissionResult = await ImagePicker.requestCameraPermissionsAsync();
-    if (permissionResult.granted === false) {
-      Alert.alert('Permission to access camera is required!');
+    // Request camera permission
+    const { status } = await ImagePicker.requestCameraPermissionsAsync();
+    if (status !== 'granted') {
+      Alert.alert('Permission required', 'Camera permission is required to take photos.');
       return;
     }
 
     try {
       const result = await ImagePicker.launchCameraAsync({
         allowsEditing: true,
-        aspect: [4, 3],
-        quality: 0.5, // Reduced quality for faster processing
+        quality: 0.5,
         mediaTypes: ImagePicker.MediaTypeOptions.Images,
         exif: false,
       });
@@ -64,13 +76,22 @@ const UploadImageScreen = () => {
         // Compress and resize the image
         const manipulatedImage = await ImageManipulator.manipulateAsync(
           uri,
-          [{ resize: { width: 1000 } }], // Resize to max width of 1000px
+          [{ resize: { width: 1000 } }],
           { compress: 0.7, format: ImageManipulator.SaveFormat.JPEG }
         );
 
         console.log('Manipulated Image URI:', manipulatedImage.uri);
 
-        setImageUri(manipulatedImage.uri);
+        // Save the image to the drip-advisor directory
+        const fileName = `drip_advisor_${Date.now()}.jpg`;
+        const newUri = `${DRIP_ADVISOR_DIRECTORY}${fileName}`;
+        await FileSystem.copyAsync({
+          from: manipulatedImage.uri,
+          to: newUri
+        });
+
+        console.log('Saved Image URI:', newUri);
+        setImageUri(newUri);
       } else {
         console.log('Camera capture cancelled or failed');
       }
@@ -98,7 +119,7 @@ const UploadImageScreen = () => {
 
     // Append the file
     formData.append('image', {
-      uri: Platform.OS === 'ios' ? imageUri.replace('file://', '') : imageUri,
+      uri: imageUri,
       type: fileType,
       name: fileName,
     });
@@ -126,11 +147,15 @@ const UploadImageScreen = () => {
       setImageUri(null);
     } catch (error) {
       console.error('Error uploading image:', error);
-      if (error.response) {
-        console.error('Response data:', error.response.data);
-        console.error('Response status:', error.response.status);
+      if (error.response && error.response.data.msg === "Token has expired") {
+        handleTokenExpiration(navigation);
+      } else {
+        if (error.response) {
+          console.error('Response data:', error.response.data);
+          console.error('Response status:', error.response.status);
+        }
+        Alert.alert('Upload failed', 'Unable to upload image. Please try again.');
       }
-      Alert.alert('Upload failed', 'Unable to upload image. Please try again.');
     } finally {
       setLoading(false); // Stop loading regardless of success or failure
     }

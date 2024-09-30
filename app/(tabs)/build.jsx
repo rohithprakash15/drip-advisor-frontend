@@ -17,6 +17,9 @@ import {
 import axios from 'axios';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Ionicons } from '@expo/vector-icons';
+import * as Location from 'expo-location';
+import { handleTokenExpiration } from '../../app/tokenUtils';
+import { useNavigation } from '@react-navigation/native';
 
 const ShimmerPlaceholder = ({ width, height }) => {
   const [fadeAnim] = useState(new Animated.Value(0.3));
@@ -53,33 +56,91 @@ const ShimmerPlaceholder = ({ width, height }) => {
 };
 
 const GeneratedOutfitsScreen = ({ route }) => {
+  const navigation = useNavigation();
   const [outfits, setOutfits] = useState([]);
   const [loading, setLoading] = useState(false);
   const [accessToken, setAccessToken] = useState(null);
   const baseUrl = 'https://drip-advisor-backend.vercel.app/';
   
-  const [weatherDescription, setWeatherDescription] = useState('sunny with moderate humidity');
-  const [temperature, setTemperature] = useState('33');
+  const [weatherDescription, setWeatherDescription] = useState('');
+  const [temperature, setTemperature] = useState('');
+  const [loadingWeather, setLoadingWeather] = useState(true);
+
   const [dayDescription, setDayDescription] = useState('');
-  const { selectedItems } = route.params;
+  const selectedItems = route?.params?.selectedItems || []; // Use optional chaining and provide a default value
 
   const [outfitsGenerated, setOutfitsGenerated] = useState(false);
 
   useEffect(() => {
-    const getToken = async () => {
+    const getTokenAndWeather = async () => {
       try {
         const token = await AsyncStorage.getItem('access_token');
         if (token) {
           setAccessToken(token);
+          const storedWeatherDescription = await AsyncStorage.getItem('weatherDescription');
+          const storedTemperature = await AsyncStorage.getItem('temperature');
+          
+          if (storedWeatherDescription && storedTemperature) {
+            setWeatherDescription(storedWeatherDescription);
+            setTemperature(storedTemperature);
+            setLoadingWeather(false);
+          } else {
+            await fetchWeatherData(token);
+          }
         } else {
           console.log('No access token found.');
         }
       } catch (error) {
-        console.error('Error retrieving token:', error);
+        console.error('Error retrieving token or weather:', error);
       }
     };
-    getToken();
+    getTokenAndWeather();
   }, []);
+
+  const fetchWeatherData = async (token) => {
+    setLoadingWeather(true);
+    try {
+      let { status } = await Location.requestForegroundPermissionsAsync();
+      if (status !== 'granted') {
+        Alert.alert('Permission to access location was denied');
+        return;
+      }
+
+      let location = await Location.getCurrentPositionAsync({});
+      let geocode = await Location.reverseGeocodeAsync({
+        latitude: location.coords.latitude,
+        longitude: location.coords.longitude
+      });
+
+      let city = geocode[0]?.city || 'Unknown';
+
+      const response = await axios.get(
+        `${baseUrl}get_weather`,
+        { location: city },
+        {
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json',
+          }
+        }
+      );
+
+      await AsyncStorage.setItem('weatherDescription', response.data.weather_description);
+      await AsyncStorage.setItem('temperature', response.data.temperature.toString());
+
+      setWeatherDescription(response.data.weather_description);
+      setTemperature(response.data.temperature.toString());
+    } catch (error) {
+      console.error('Error fetching weather:', error);
+      if (error.response && error.response.data.msg === "Token has expired") {
+        handleTokenExpiration(navigation);
+      } else {
+        Alert.alert('Error', 'Unable to fetch weather data. Please try again.');
+      }
+    } finally {
+      setLoadingWeather(false);
+    }
+  };
 
   const generateOutfits = async () => {
     if (!weatherDescription || !temperature) {
@@ -122,7 +183,11 @@ const GeneratedOutfitsScreen = ({ route }) => {
       setOutfits(filteredOutfits);
     } catch (error) {
       console.error('Error generating outfits:', error.response ? error.response.data : error.message);
-      Alert.alert('Error', 'Unable to generate outfits. Please try again.');
+      if (error.response && error.response.data.msg === "Token has expired") {
+        handleTokenExpiration(navigation);
+      } else {
+        Alert.alert('Error', 'Unable to generate outfits. Please try again.');
+      }
     } finally {
       setLoading(false);
     }
@@ -198,6 +263,23 @@ const GeneratedOutfitsScreen = ({ route }) => {
     </View>
   );
 
+  const refreshWeather = async () => {
+    setLoadingWeather(true);
+    try {
+      const token = await AsyncStorage.getItem('access_token');
+      if (!token) {
+        Alert.alert('Error', 'No access token found.');
+        return;
+      }
+      await fetchWeatherData(token);
+    } catch (error) {
+      console.error('Error refreshing weather:', error);
+      Alert.alert('Error', 'Unable to refresh weather data. Please try again.');
+    } finally {
+      setLoadingWeather(false);
+    }
+  };
+
   return (
     <KeyboardAvoidingView
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
@@ -205,25 +287,43 @@ const GeneratedOutfitsScreen = ({ route }) => {
     >
       <Text style={styles.pageTitle}>Daily Suggestions</Text>
       <ScrollView contentContainerStyle={styles.scrollContent}>
-        <View style={styles.inputContainer}>
-          <Ionicons name="cloudy-outline" size={24} color="#666" style={styles.inputIcon} />
-          <TextInput
-            placeholder="Weather Description"
-            value={weatherDescription}
-            onChangeText={setWeatherDescription}
-            style={styles.input}
-          />
+        <View style={styles.weatherContainer}>
+          <View style={styles.weatherInputs}>
+            <View style={styles.inputContainer}>
+              <Ionicons name="cloudy-outline" size={24} color="#666" style={styles.inputIcon} />
+              <TextInput
+                placeholder="Weather Description"
+                value={weatherDescription}
+                onChangeText={setWeatherDescription}
+                style={styles.input}
+                editable={!loadingWeather}
+              />
+            </View>
+            <View style={styles.inputContainer}>
+              <Ionicons name="thermometer-outline" size={24} color="#666" style={styles.inputIcon} />
+              <TextInput
+                placeholder="Temperature (°C)"
+                value={temperature}
+                onChangeText={setTemperature}
+                keyboardType="numeric"
+                style={styles.input}
+                editable={!loadingWeather}
+              />
+            </View>
+          </View>
+          <TouchableOpacity 
+            style={styles.refreshButton} 
+            onPress={refreshWeather}
+            disabled={loadingWeather}
+          >
+            {loadingWeather ? (
+              <ActivityIndicator size="small" color="#fff" />
+            ) : (
+              <Ionicons name="refresh" size={24} color="#fff" />
+            )}
+          </TouchableOpacity>
         </View>
-        <View style={styles.inputContainer}>
-          <Ionicons name="thermometer-outline" size={24} color="#666" style={styles.inputIcon} />
-          <TextInput
-            placeholder="Temperature (°C)"
-            value={temperature}
-            onChangeText={setTemperature}
-            keyboardType="numeric"
-            style={styles.input}
-          />
-        </View>
+        
         <View style={styles.inputContainer}>
           <Ionicons name="calendar-outline" size={24} color="#666" style={styles.inputIcon} />
           <TextInput
@@ -356,6 +456,24 @@ const styles = StyleSheet.create({
   shimmer: {
     backgroundColor: '#E0E0E0',
     borderRadius: 10,
+  },
+  weatherContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 10,
+  },
+  weatherInputs: {
+    flex: 1,
+  },
+  refreshButton: {
+    backgroundColor: '#50C2C9',
+    padding: 10,
+    borderRadius: 5,
+    marginLeft: 10,
+    alignItems: 'center',
+    justifyContent: 'center',
+    width: 44,
+    height: 44,
   },
 });
 

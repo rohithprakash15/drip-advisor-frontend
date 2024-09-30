@@ -4,6 +4,7 @@ import axios from 'axios';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useNavigation } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
+import { handleTokenExpiration } from '../../app/tokenUtils';
 
 const Dropdown = ({ options, selectedValue, onSelect, label }) => {
   const [visible, setVisible] = useState(false);
@@ -107,13 +108,17 @@ const WardrobeScreen = () => {
           setImageLoadingStatus(initialLoadingStatus);
         } catch (error) {
           console.error('Error fetching clothing items:', error.response ? error.response.data : error.message);
-          Alert.alert('Error', 'Unable to fetch clothing items. Please try again.');
+          if (error.response && error.response.data.msg === "Token has expired") {
+            handleTokenExpiration(navigation);
+          } else {
+            Alert.alert('Error', 'Unable to fetch clothing items. Please try again.');
+          }
         }
       };
 
       fetchClothingItems();
     }
-  }, [accessToken]);
+  }, [accessToken, navigation]);
 
   const handleItemToggle = (id, available) => {
     if (longPressSelectedItems.length > 0) {
